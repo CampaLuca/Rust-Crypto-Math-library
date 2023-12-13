@@ -72,6 +72,72 @@ impl Instance for BigUint {
     }
 }
 
+impl Instance for i32 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn has_type(&self) -> ClassTypes {
+        ClassTypes::I32
+    }
+
+    fn one() -> Self {
+        1 as i32
+    }
+
+    fn zero() -> Self {
+        0 as i32
+    }
+
+    fn is_zero(self) -> bool {
+        self == (0 as i32)
+    }
+}
+
+impl Instance for u32 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn has_type(&self) -> ClassTypes {
+        ClassTypes::U32
+    }
+
+    fn one() -> Self {
+        1 as u32
+    }
+
+    fn zero() -> Self {
+        0 as u32
+    }
+
+    fn is_zero(self) -> bool {
+        self == (0 as u32)
+    }
+}
+
+impl Instance for usize {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn has_type(&self) -> ClassTypes {
+        ClassTypes::USIZE
+    }
+
+    fn one() -> Self {
+        1 as usize
+    }
+
+    fn zero() -> Self {
+        0 as usize
+    }
+
+    fn is_zero(self) -> bool {
+        self == (0 as usize)
+    }
+}
+
 
 impl Instance for BigDecimal {
     fn has_type(&self) -> ClassTypes {
@@ -146,7 +212,7 @@ pub fn ring_poly_pow<T>(value: PolynomialRingInstance<T>, exponent: BigInt) -> P
         if exp.clone() & BigInt::from(1) == BigInt::from(1) {
             acc = acc * base.clone();
         }
-    }
+    } 
     acc
 }
 

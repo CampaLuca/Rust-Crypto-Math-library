@@ -60,8 +60,21 @@ pub mod algebras {
     }
 }
 
-pub mod generators {
+pub mod arith {
     pub mod random;
+    pub mod primes;
+}
+
+pub mod cryptography {
+    pub mod asymmetric {
+        pub mod interfaces { pub mod interfaces; }
+        pub mod primitives { pub mod rsa; }
+    }
+
+    pub mod symmetric {
+        pub mod interfaces { pub mod interfaces; }
+        pub mod primitives {  }
+    }
 }
 
 // use num_bigint;

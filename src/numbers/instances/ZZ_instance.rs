@@ -1,5 +1,6 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
+use crate::arith::primes::is_prime;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::ZZ::ZZ;
 use crate::numbers::instances::RR_instance::RRinstance;
@@ -12,7 +13,7 @@ use core::any::Any;
 use std::cell::RefCell;
 use crate::numbers::numbers::generic_pow;
 use std::cmp::Ordering;
-
+use crate::arith::primes::is_pseudoprime;
 
 // INTEGERS
 
@@ -75,6 +76,33 @@ impl Eq for ZZinstance {}
 // }
 
 impl ZZinstance {
+    pub fn next_prime(&self) -> ZZinstance {
+        let mut starting_value = self.value.clone();
+        let mut found: bool = false;
+
+        while !found {
+            starting_value = starting_value + 1;
+            if is_prime(starting_value.clone().to_biguint().unwrap()) {
+                found = true
+            }
+        }
+
+        self.class.clone().into_inner().apply(starting_value)
+    }
+
+    pub fn next_probable_prime(&self) -> ZZinstance {
+        let mut starting_value = self.value.clone();
+        let mut found: bool = false;
+
+        while !found {
+            starting_value = starting_value + 1;
+            if is_pseudoprime(starting_value.clone(), true) {
+                found = true
+            }
+        }
+
+        self.class.clone().into_inner().apply(starting_value)
+    }
 }
 
 

@@ -30,8 +30,12 @@ impl PartialEq for ZmodInstance {
 impl Eq for ZmodInstance {}
 
 impl ZmodInstance {
-    fn inverse(&self) -> ZmodInstance {
+    pub fn inverse(&self) -> ZmodInstance {
         self.class.clone().into_inner().inverse((*self).clone()) 
+    }
+
+    pub fn get_bigint_value(&self) -> BigInt {
+        self.value.clone()
     }
 }
 

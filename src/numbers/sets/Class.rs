@@ -14,6 +14,9 @@ pub enum ClassTypes {
    U64,
    F32,
    F64,
+   USIZE,
+   U8,
+   I8,
    UnivariatePolynomial,
    Polynomial
 }

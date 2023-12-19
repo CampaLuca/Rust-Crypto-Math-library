@@ -22,6 +22,11 @@ pub mod numbers {
     }
     
 }
+
+pub mod matrices {
+    pub mod matrix;
+}
+
 pub mod variables {
     pub mod vars;
 }
@@ -72,6 +77,11 @@ pub mod cryptography {
     }
 
     pub mod symmetric {
+        pub mod AES {
+            pub mod aes_functions;
+            pub mod cipher;
+            pub mod data;
+        }
         pub mod interfaces { pub mod interfaces; }
         pub mod primitives {  }
     }

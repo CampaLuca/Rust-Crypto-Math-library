@@ -37,8 +37,12 @@ pub struct PolynomialRing<T> {
 
 impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand + Number {
     pub fn apply(&self, x: &UnivariatePolynomial<T>) -> PolynomialRingInstance<T> {
-        let qr: Vec<UnivariatePolynomial<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
-        self.new_instance(qr[1].var.clone(), qr[1].coefficients.clone())
+        if self.irreducible_polynomial.degree() > x.degree() {
+            self.new_instance(x.var.clone(), x.coefficients.clone())
+        } else {
+            let qr: Vec<UnivariatePolynomial<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
+            self.new_instance(qr[1].var.clone(), qr[1].coefficients.clone())
+        }
     }
 }
 

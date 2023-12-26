@@ -81,7 +81,7 @@ impl<T> UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq 
     
     pub fn quotient(self, irreducible_poly: UnivariatePolynomial<T>) -> PolynomialRingInstance<T> {
         let class: PolynomialRing<T> = PolynomialRing::new(irreducible_poly);
-        class.new_instance(self.var, self.coefficients)
+        class.apply(&self) //(self.var, self.coefficients)
     }
 
     pub fn one(v: Var) -> UnivariatePolynomial<T> {

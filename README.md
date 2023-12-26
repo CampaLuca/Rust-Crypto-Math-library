@@ -1,8 +1,9 @@
-# Rust_SageMath
+# Rust Math and Cryptography library
 
 ## This is an ongoing project. It MUST NOT be used in production.
 A Rust implementation of some SageMath functions.
 It included also Cryptographic primitives implemented with the same concept of Google Tink. 
+The aim is to put withing a single library all the currectly used schemes and some of the recently standardized PQ algorithms. 
 
 
 ### TODO:

@@ -4,6 +4,7 @@ use bigdecimal::RoundingMode;
 use num_integer::Integer;
 use num_integer::ExtendedGcd;
 use crate::numbers::numbers::Instance;
+use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
 use crate::poly::univariate_polynomial::UnivariatePolynomial;
@@ -24,12 +25,12 @@ pub fn modular_inverse(a: BigInt, module: BigInt) -> BigInt {
     x
 }
 
-pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) -> Vec<UnivariatePolynomial<T>> where T: Instance + Clone + PartialEq + Operand  {
+pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) -> Vec<UnivariatePolynomial<T>> where T: Instance + Clone + PartialEq + Operand + Number {
     if (*q).clone() == UnivariatePolynomial::zero(q.var.clone()) {
         panic!("Cannot divide by 0");
     } else {
         let mut l: UnivariatePolynomial<T> = UnivariatePolynomial::zero(q.var.clone());
-        let mut r = (*p).clone();
+        let mut r: UnivariatePolynomial<T> = (*p).clone();
         let var = q.var.clone();
         while r != UnivariatePolynomial::zero(p.var.clone()) && q.clone().degree() <= r.clone().degree() {
             let t = r.clone().leading_coefficient().div(&(q.leading_coefficient()));
@@ -38,7 +39,7 @@ pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) 
                 coeff_m.push(T::zero());
             }
             coeff_m.push(T::one());
-            let m = UnivariatePolynomial::new(coeff_m, var.clone(), None);
+            let m: UnivariatePolynomial<T> = UnivariatePolynomial::new(coeff_m, var.clone(), None);
             l = l+m.clone()*t.clone();
             r = r.clone()-((*q).clone()*m*t);
 
@@ -50,9 +51,9 @@ pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) 
         result
         
     }
-
-
 }
+
+
 
 // def div(p,q):
 //     if q==0:
@@ -69,7 +70,7 @@ pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) 
 //             print(l,r)
 //         return(l,r)
 
-pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand {
+pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number {
     /*
     Extended Euclidean Algorithm (iterative)
     Return (d, x, y) where:

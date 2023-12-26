@@ -1,6 +1,7 @@
 //use sagemath::numbers::sets::General_Class;
 
 use crate::numbers::numbers::Instance;
+use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::utilities::utils;
 use std::cell::RefCell;
@@ -34,7 +35,7 @@ pub struct PolynomialRing<T> {
 //     }
 // }
 
-impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand {
+impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand + Number {
     pub fn apply(&self, x: &UnivariatePolynomial<T>) -> PolynomialRingInstance<T> {
         let qr: Vec<UnivariatePolynomial<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
         self.new_instance(qr[1].var.clone(), qr[1].coefficients.clone())
@@ -49,7 +50,7 @@ impl<T> PartialEq for PolynomialRing<T> where T: Instance + PartialEq + Clone{
 }
 impl<T> Eq for PolynomialRing<T> where T: Instance + PartialEq + Clone {}
 
-impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number {
     pub fn one(self, v: Var) -> PolynomialRingInstance<T> {
         self.new_instance(v, vec![T::one()])
     }
@@ -60,7 +61,7 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq {
 }
 
 
-impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number {
     pub fn new(irreducible_polynomial: UnivariatePolynomial<T>) -> PolynomialRing<T> {
         PolynomialRing { irreducible_polynomial: irreducible_polynomial } 
     }

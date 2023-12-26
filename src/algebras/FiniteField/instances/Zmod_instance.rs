@@ -1,11 +1,14 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
+use crate::numbers::classes::ZZ::ZZ;
 use crate::numbers::numbers::Class;
 use crate::numbers::numbers::Instance;
+use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::instances::RR_instance::RRinstance;
+use crate::numbers::numbers::Random;
 use crate::numbers::sets::Class::ClassTypes;
 use core::any::Any;
 use std::cell::RefCell;
@@ -263,6 +266,9 @@ impl Instance for ZmodInstance {
     fn as_any(&self) -> &dyn Any {
         self
     }
+}
+
+impl Number for ZmodInstance{
     fn one() -> ZmodInstance {
         let c = Zmod::new(Some(BigInt::from(2)));
         c.one()
@@ -273,6 +279,19 @@ impl Instance for ZmodInstance {
     }
     fn is_zero(self) -> bool {
         self.value == BigInt::zero()
+    }
+    fn round_to_zz(self) -> ZZinstance {
+        ZZ::new().apply(self.value)
+    }
+}
+    
+impl Random for ZmodInstance {
+    fn random(bit_length: u64) -> Self {
+        panic!("Method not implemented");
+    }
+
+    fn random_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -> Self {
+        panic!("Method not implemented");
     }
 }
 

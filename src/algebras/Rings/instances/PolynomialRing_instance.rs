@@ -1,5 +1,7 @@
 use num_bigint::BigInt;
+use num_traits::Num;
 use crate::numbers::numbers::Instance;
+use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::numbers::ring_poly_pow;
 use crate::poly::univariate_polynomial::UnivariatePolynomial;
@@ -24,7 +26,7 @@ impl<T> PartialEq for PolynomialRingInstance<T> where T: Instance + PartialEq + 
 }
 impl<T> Eq for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone  {}
 
-impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
+impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand + Number {
    
 
     pub fn degree(&self) -> usize {
@@ -54,7 +56,7 @@ impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operan
 /*
     NEGATION
 */
-impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
+impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Number + Instance + Clone + PartialEq + Operand {
     type Output = PolynomialRingInstance<T>;
     fn neg(self) -> PolynomialRingInstance<T> {
         self.class.clone().into_inner().neg(self)
@@ -64,7 +66,7 @@ impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Instance + Clone + 
 
 
 // ADDITION
-impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Operand {
+impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn add(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -77,7 +79,7 @@ impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // SUBTRACTION
-impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn sub(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -89,7 +91,7 @@ impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // MULTIPLICATION by an other polynomial in the RING
-impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn mul(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -101,7 +103,7 @@ impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // MULTIPLICATION by a scalar value
-impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn mul(self, rhs: T) -> PolynomialRingInstance<T> {
         let coefficients = self.coefficients.into_iter().map(|x| {
@@ -112,7 +114,7 @@ impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Instance + Parti
 }
 
 // DIVISION
-impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn div(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -128,7 +130,7 @@ impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 
 
 // to be corrected TODO
-impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Operand {
+impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn pow(self, rhs: BigInt) -> PolynomialRingInstance<T> {
         ring_poly_pow::<T>(self.clone(), rhs)
@@ -137,7 +139,7 @@ impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Inst
 
 
 
-impl<T> Operand for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Operand {
+impl<T> Operand for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Number  + Operand{
     fn neg(&self) ->  PolynomialRingInstance<T> {
         -(*self).clone()
     }
@@ -165,11 +167,57 @@ impl<T> Operand for PolynomialRingInstance<T> where T: Instance + PartialEq + Cl
    
 }
 
+impl<T> Instance for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Operand {
+    fn as_any(&self) -> &dyn std::any::Any {
+        panic!("Useless method");
+    }
+    fn has_type(&self) -> crate::numbers::sets::Class::ClassTypes {
+        crate::numbers::sets::Class::ClassTypes::PolynomialRing
+    }
+}
+
+impl<T> Number for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
+    fn zero() -> Self {
+        panic!("Method not implemented");
+    }
+
+    fn is_zero(self) -> bool {
+        panic!("Method not implemented");
+    }
+    fn one() -> Self {
+        panic!("Method not implemented");
+    }
+    fn round_to_zz(self) -> crate::numbers::instances::ZZ_instance::ZZinstance {
+        panic!("Method not implemented");
+    }
+}
+    
+
+    // fn random(bit_length: u64) -> Self {
+    //     panic!("Method not implemented");
+    // }
+
+   
+
+    // fn random_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -> Self {
+    //     panic!("Method not implemented");
+    // }
+
+    // fn zero() -> Self {
+    //     panic!("Method not implemented");
+    // }
+
+    // fn is_zero(self) -> bool {
+    //     panic!("Method not implemented");
+    // }
+
+
+
 
 // COMPARISON
 
 // COMPARISON OPERATORS
-impl<T> PartialOrd for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
+impl<T> PartialOrd for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand + Number{
     fn lt(&self, other: &Self) -> bool {
         self.degree() < other.degree()
     }
@@ -191,7 +239,7 @@ impl<T> PartialOrd for PolynomialRingInstance<T> where T: Instance + Clone + Par
     }
 }
 
-impl<T> Ord for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
+impl<T> Ord for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand  + Number{
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self < other {
             Ordering::Less
@@ -205,7 +253,7 @@ impl<T> Ord for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq 
 
 
 
-impl<T> std::fmt::Display for PolynomialRingInstance<T> where T: Instance + Operand + Clone +  std::fmt::Display {
+impl<T> std::fmt::Display for PolynomialRingInstance<T> where T: Instance + Number + Operand + Clone +  std::fmt::Display {
     // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         // Write strictly the first element into the supplied output

@@ -1,7 +1,12 @@
-use crate::numbers::numbers::Instance;
-use crate::numbers::numbers::Operand;
-use crate::poly::monomial::Monomial;
+use num_bigint::BigInt;
 
+use crate::numbers::numbers::Class;
+use crate::numbers::numbers::Instance;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Operand;
+use crate::numbers::sets::Class::ClassTypes;
+use crate::poly::monomial::Monomial;
+use crate::variables::vars::Var;
 
 
 
@@ -20,6 +25,24 @@ impl<T> Polynomial<T> where T: Instance + Operand + Clone {
     //     // write the code to convert a polynomial to univariate polynomial
     // }
 }
+
+impl<T> PartialEq for Polynomial<T> where T: Instance + PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        if self.monomials.len() != other.monomials.len() {
+            return false;
+        }
+
+        let mut equal: bool = true;
+        for i in 0..self.monomials.len() {
+            equal = equal && (self.monomials[i] == other.monomials[i]);
+        }
+
+        equal
+        
+    }
+}
+impl<T> Eq for Polynomial<T> where T: Instance + PartialEq {}
+
 
 // add function
 
@@ -51,3 +74,81 @@ impl<T> std::fmt::Display for Polynomial<T> where T: Instance + Operand + Clone 
         write!(f, "{0}", printable )
     }
 }
+
+
+impl<T> Operand for Polynomial<T> where T: Instance + Operand + Clone + Eq + Number {
+    fn neg(&self) -> Self {
+        let mut monomials: Vec<Monomial<T>> = self.monomials.clone();
+        for i in 0..monomials.len() {
+            monomials[i] = -monomials[i].clone();
+        }
+
+        Polynomial::new(monomials)
+    }
+    
+    fn add(&self, other: &Self) -> Self {
+        self.clone() //*self + *other
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        self.clone() //*self - *other
+    }
+
+    fn mul(&self, other: &Self) -> Self {
+        self.clone() //*self * *other
+    }
+
+    fn div(&self, other: &Self) -> Self {
+        self.clone() //*self / *other
+    }
+
+    fn equal(&self, other:&Self) -> bool {
+        *self == *other
+    }
+
+    // not implemented
+    fn greater_than(&self, other: &Self) -> bool {
+        panic!("This method is not implemented for Polynomials");
+    }
+
+    fn less_than(&self, other: &Self) -> bool {
+        panic!("This method is not implemented for Polynomials");
+    }
+}
+
+
+impl<T> Instance for Polynomial<T> where T: Instance + Clone + Operand + Eq {
+    fn as_any(&self) -> &dyn std::any::Any {
+        panic!("Method not implemented"); //self
+    }
+
+    fn has_type(&self) -> ClassTypes {
+        ClassTypes::Polynomial
+    }
+}
+
+
+    // fn is_zero(self) -> bool {
+    //     self.monomials.len() == 0
+    // }
+
+    // fn one() -> Self {
+    //     let mut monomials: Vec<Monomial<T>> = Vec::new();
+    //     let mut variables: Vec<Var> = Vec::new();
+    //     variables.push(Var::new("x", BigInt::from(0)));
+    //     monomials.push(Monomial::new(variables, T::one()));
+    //     Polynomial::new(monomials)
+    // }
+
+    // fn zero() -> Self {
+    //     let monomials: Vec<Monomial<T>> = Vec::new();
+    //     Polynomial::new(monomials)
+    // }
+
+    // fn random(_bit_length: u64) -> Self {
+    //     panic!("If you want to generate random polynomials don't use this method");
+    // }
+
+    // fn random_with_bounds(_lower_bound: BigInt, _upper_bound: BigInt) -> Self {
+    //     panic!("If you want to generate random polynomials don't use this method");
+    // }

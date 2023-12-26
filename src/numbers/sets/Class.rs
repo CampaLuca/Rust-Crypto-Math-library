@@ -18,5 +18,6 @@ pub enum ClassTypes {
    U8,
    I8,
    UnivariatePolynomial,
-   Polynomial
+   Polynomial,
+   PolynomialRing
 }

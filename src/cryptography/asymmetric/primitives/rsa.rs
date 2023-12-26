@@ -2,7 +2,7 @@ use bigdecimal::BigDecimalRef;
 use num_bigint::BigInt;
 use num_bigint::Sign;
 
-use crate::{cryptography::asymmetric::interfaces::interfaces::{RSAinterface}, algebras::FiniteField::{classes::Zmod::Zmod, instances::Zmod_instance::{self, ZmodInstance}}, numbers::numbers::Class, arith::primes::get_strong_prime};
+use crate::{cryptography::asymmetric::interfaces::interfaces::{PKIinterface}, algebras::FiniteField::{classes::Zmod::Zmod, instances::Zmod_instance::{self, ZmodInstance}}, numbers::numbers::Class, arith::primes::get_strong_prime};
 
 pub struct RSA {
     public_keys: Vec<(BigInt, BigInt)>, // n, e
@@ -10,7 +10,7 @@ pub struct RSA {
     primary_key: usize
 }
 
-impl RSAinterface for RSA {
+impl PKIinterface for RSA {
     fn encrypt(&self, plaintext: Vec<u8>) -> Vec<u8> {
         // convert bytes to BigInt as big endian
         let value: BigInt = BigInt::from_bytes_be(Sign::Plus, &plaintext);

@@ -1,3 +1,4 @@
+use crate::numbers::numbers::Number;
 use crate::variables::vars::Var;
 use num_bigint::BigInt;
 use crate::numbers::numbers::Instance;
@@ -15,7 +16,7 @@ pub struct Monomial<T> {
 }
 
 
-impl<T> Monomial<T> where T: Instance + Operand + Clone {
+impl<T> Monomial<T> where T: Instance + Operand + Clone + Number {
     pub fn new(vars: Vec<Var>, coefficient: T) -> Monomial<T> {
         Monomial { variables: vars, coefficient: coefficient }
     }
@@ -42,17 +43,34 @@ impl<T> Monomial<T> where T: Instance + Operand + Clone {
     }
 }
 
+impl<T> PartialEq for Monomial<T> where T: Instance + PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        if self.variables.len() != other.variables.len() {
+            return false;
+        }
+
+        let mut equal: bool = true;
+        for i in 0..self.variables.len() {
+            equal = equal && (self.variables[i] == other.variables[i]);
+        }
+
+        equal && (self.coefficient == other.coefficient)
+        
+    }
+}
+impl<T> Eq for Monomial<T> where T: Instance + PartialEq {}
+
 
 // OPERATIONS
 
-impl<T> std::ops::Neg for Monomial<T> where T: Instance + Operand + Clone{
+impl<T> std::ops::Neg for Monomial<T> where T: Instance + Operand + Clone + Number{
     type Output = Monomial<T>;
     fn neg(self) -> Monomial<T> {
         Monomial::new(self.variables, self.coefficient.neg())
     }
 }
 
-impl<T> std::ops::Add for Monomial<T> where T: Instance + Operand + Clone {
+impl<T> std::ops::Add for Monomial<T> where T: Instance + Operand + Clone + Number {
     type Output = Either<Monomial<T>, Polynomial<T>>;
     fn add(self, rhs: Monomial<T>) -> Either<Monomial<T>, Polynomial<T>> {
         if self.is_similar(rhs.clone()) {
@@ -68,7 +86,7 @@ impl<T> std::ops::Add for Monomial<T> where T: Instance + Operand + Clone {
     }
 }
 
-impl<T> std::ops::Sub for Monomial<T> where T: Instance + Operand + Clone {
+impl<T> std::ops::Sub for Monomial<T> where T: Instance + Operand + Clone + Number {
     type Output = Either<Monomial<T>, Polynomial<T>>;
     fn sub(self, rhs: Monomial<T>) -> Either<Monomial<T>, Polynomial<T>> {
         if self.is_similar(rhs.clone()) {
@@ -86,7 +104,7 @@ impl<T> std::ops::Sub for Monomial<T> where T: Instance + Operand + Clone {
 
 
 // multiplication and division will generate a new monomial
-impl<T> std::ops::Mul for Monomial<T> where T: Instance + Operand + Clone {
+impl<T> std::ops::Mul for Monomial<T> where T: Instance + Operand + Clone + Number {
     type Output = Monomial<T>;
     fn mul(self, rhs: Monomial<T>) -> Monomial<T> {
         let k: T = rhs.coefficient;
@@ -109,7 +127,7 @@ impl<T> std::ops::Mul for Monomial<T> where T: Instance + Operand + Clone {
     }
 }
 
-impl<T> std::ops::Div for Monomial<T> where T: Instance + Operand + Clone {
+impl<T> std::ops::Div for Monomial<T> where T: Instance + Operand + Clone + Number {
     type Output = Monomial<T>;
     fn div(self, rhs: Monomial<T>) -> Monomial<T> {
         

@@ -1,6 +1,8 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
 use crate::arith::primes::is_prime;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Random;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::ZZ::ZZ;
 use crate::numbers::instances::RR_instance::RRinstance;
@@ -262,6 +264,9 @@ impl Instance for ZZinstance {
     fn as_any(&self) -> &dyn Any {
         self
     }
+}
+
+impl Number for ZZinstance {
     fn one() -> ZZinstance {
         let c = ZZ::new();
         c.one()
@@ -272,6 +277,21 @@ impl Instance for ZZinstance {
     }
     fn is_zero(self) -> bool {
         self == ZZinstance::zero()
+    }
+    fn round_to_zz(self) -> ZZinstance {
+        self
+    }
+}
+
+impl Random for ZZinstance {
+    fn random(bit_length: u64) -> Self {
+        let value: BigInt = BigInt::random(bit_length);
+        ZZ::new().new_instance(value)
+    }
+
+    fn random_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -> Self {
+        let value: BigInt = BigInt::random_with_bounds(lower_bound, upper_bound);
+        ZZ::new().new_instance(value)
     }
 }
 impl Operand for ZZinstance {

@@ -1,3 +1,17 @@
+use num_bigint::BigInt;
+use num_traits::Num;
+
+use crate::algebras::FiniteField::classes::Zmod::Zmod;
+use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
+use crate::arith::random::get_random_bigint_with_bounds;
+use crate::numbers::instances::RR_instance::RRinstance;
+use crate::numbers::instances::ZZ_instance;
+use crate::numbers::instances::ZZ_instance::ZZinstance;
+use crate::numbers::numbers::Class;
+use crate::numbers::numbers::Number;
+use crate::numbers::sets::Class::ClassTypes;
+use crate::utilities;
+use crate::utilities::utils::poly_divmod;
 use crate::variables::vars::Var;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Operand;
@@ -12,7 +26,7 @@ pub enum PolyMultiplicationAlgorithm {
 }
 
 // utilities
-fn clean<T>(mut coeff: Vec<T>) -> Vec<T> where T: Instance + Operand + Clone {
+fn clean<T>(mut coeff: Vec<T>) -> Vec<T> where T: Instance + Operand + Clone + Number {
     loop {
         if coeff[coeff.len()-1].clone().is_zero() {
             coeff.pop();
@@ -22,9 +36,6 @@ fn clean<T>(mut coeff: Vec<T>) -> Vec<T> where T: Instance + Operand + Clone {
     }
     coeff
 }
-
-
-
 
 // POLYNOMIAL
 #[derive(Clone)]
@@ -41,13 +52,23 @@ impl<T> PartialEq for UnivariatePolynomial<T> where T: Instance + PartialEq {
 }
 impl<T> Eq for UnivariatePolynomial<T> where T: Instance + PartialEq {}
 
-impl<T> UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq + Number {
     pub fn new(coefficients: Vec<T>, var: Var, multiplication_algorithm: Option<String>) -> UnivariatePolynomial<T> {
         if multiplication_algorithm.is_none() {
             UnivariatePolynomial { coefficients: clean::<T>(coefficients), var: var, multiplication_algorithm: String::from("Naive") }
         } else {
             UnivariatePolynomial { coefficients: clean::<T>(coefficients), var: var, multiplication_algorithm: multiplication_algorithm.unwrap() }
         }
+    }
+
+    
+    pub fn round(&self) -> UnivariatePolynomial<ZZinstance> {
+        let mut coefficients: Vec<ZZinstance> = Vec::new();
+        for i in 0..self.degree()+1 {
+            coefficients.push((self.coefficients[i].clone()).round_to_zz());
+        }
+        UnivariatePolynomial::new(coefficients, self.var.clone(), Some(self.multiplication_algorithm.clone()))
+
     }
 
     pub fn degree(&self) -> usize {
@@ -72,7 +93,7 @@ impl<T> UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq 
     }
 }
 
-impl<T> std::ops::Add for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> std::ops::Add for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq + Number {
     type Output = UnivariatePolynomial<T>;
     fn add(self, rhs: UnivariatePolynomial<T>) -> UnivariatePolynomial<T> {
         if self.var == rhs.var {
@@ -105,7 +126,7 @@ impl<T> std::ops::Add for UnivariatePolynomial<T> where T: Instance + Operand + 
     }
 }
 
-impl<T> std::ops::Sub for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> std::ops::Sub for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq + Number {
     type Output = UnivariatePolynomial<T>;
     fn sub(self, rhs: UnivariatePolynomial<T>) -> UnivariatePolynomial<T> {
         if  self.var == rhs.var {
@@ -138,7 +159,7 @@ impl<T> std::ops::Sub for UnivariatePolynomial<T> where T: Instance + Operand + 
 }
 
 
-impl<T> std::ops::Mul for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq {
+impl<T> std::ops::Mul for UnivariatePolynomial<T> where T: Instance + Operand + Clone + PartialEq + Number {
     type Output = UnivariatePolynomial<T>;
     fn mul(self, rhs: UnivariatePolynomial<T>) -> UnivariatePolynomial<T> {
         if self.var == rhs.var {
@@ -173,19 +194,47 @@ impl<T> std::ops::Mul for UnivariatePolynomial<T> where T: Instance + Operand + 
     }
 }
 
+
+
 // MULTIPLICATION by a scalar value
-impl<T> std::ops::Mul<T> for UnivariatePolynomial<T> where T: Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Mul<T> for UnivariatePolynomial<T> where T: Instance + PartialEq  + Clone + Operand + Number {
     type Output = UnivariatePolynomial<T>;
     fn mul(self, rhs: T) -> UnivariatePolynomial<T> {
         let coefficients = self.coefficients.into_iter().map(| x| {
-            x.mul(&rhs)
+            x//x.mul(&rhs)
         }).collect();
         UnivariatePolynomial::new(coefficients, self.var, Some(self.multiplication_algorithm))
     }
 }
 
 
-impl<T> std::fmt::Display for UnivariatePolynomial<T> where T: Instance + Operand + Clone +  std::fmt::Display {
+
+
+
+
+
+impl std::ops::Rem<BigInt> for UnivariatePolynomial<ZZinstance> {
+    type Output = UnivariatePolynomial<ZmodInstance>;
+    fn rem(self, rhs: BigInt) -> Self::Output {
+        let field: Zmod = Zmod::new(Some(rhs));
+        let coefficients = self.coefficients.into_iter().map(| x| {
+            field.apply(x)
+        }).collect();
+        UnivariatePolynomial::new(coefficients, self.var, Some(self.multiplication_algorithm))
+    }
+}
+
+
+impl<T> std::ops::Div for UnivariatePolynomial<T> where T: Instance + Clone + PartialEq + Operand + Number {
+    type Output = (UnivariatePolynomial<T>, UnivariatePolynomial<T>);
+    fn div(self, rhs: UnivariatePolynomial<T>) -> (UnivariatePolynomial<T>, UnivariatePolynomial<T>) {
+        let q_and_r: Vec<UnivariatePolynomial<T>> = poly_divmod(&self.clone(), &rhs.clone());
+        (q_and_r[0].clone(), q_and_r[1].clone())
+    }
+}
+
+
+impl<T> std::fmt::Display for UnivariatePolynomial<T> where T: Instance + Operand + Clone +  Number + std::fmt::Display {
     // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         // Write strictly the first element into the supplied output
@@ -215,3 +264,108 @@ impl<T> std::fmt::Display for UnivariatePolynomial<T> where T: Instance + Operan
         write!(f, "{0}", printable)
     }
 }
+
+
+
+impl<T> Operand for UnivariatePolynomial<T> where T: Instance + Operand + Clone + Eq + Number{
+    fn neg(&self) -> Self {
+        let mut coefficients: Vec<T> = self.coefficients.clone();
+        for i in 0..coefficients.len() {
+            coefficients[i] = coefficients[i].neg();
+        }
+
+        UnivariatePolynomial::new(coefficients, self.var.clone(), Some(self.multiplication_algorithm.clone()))
+    }
+    
+    fn add(&self, other: &Self) -> Self {
+        self.clone() + other.clone()
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        self.clone() - other.clone()
+    }
+
+    fn mul(&self, other: &Self) -> Self {
+        self.clone() * other.clone()
+    }
+
+    fn div(&self, other: &Self) -> Self {
+        panic!("Division implemented directly, not passing through operand");// *self / *other
+    }
+
+    fn equal(&self, other:&Self) -> bool {
+        *self == *other
+    }
+
+    // not implemented
+    fn greater_than(&self, other: &Self) -> bool {
+        panic!("This method is not implemented for Polynomials");
+    }
+
+    fn less_than(&self, other: &Self) -> bool {
+        panic!("This method is not implemented for Polynomials");
+    }
+
+
+}
+
+
+impl<T> Instance for UnivariatePolynomial<T> where T: Instance + Clone + Operand + Eq {
+    fn as_any(&self) -> &dyn std::any::Any {
+        panic!("Method not implemented");
+    }
+
+    fn has_type(&self) -> ClassTypes {
+        ClassTypes::UnivariatePolynomial
+    }
+}
+
+
+impl<T> Number for UnivariatePolynomial<T> where T: Instance + Clone + Number + Operand + PartialEq{
+    fn is_zero(self) -> bool {
+        self.coefficients.len() == 1 && self.coefficients[0] == T::zero()
+    }
+
+    fn one() -> Self {
+        let variable = Var::new("x", BigInt::from(0));
+        let mut coefficients: Vec<T> = Vec::new();
+        coefficients.push(T::one());
+        UnivariatePolynomial::new(coefficients, variable, None)
+    }
+
+    fn zero() -> Self {
+        let variable = Var::new("x", BigInt::from(0));
+        let mut coefficients: Vec<T> = Vec::new();
+        coefficients.push(T::zero());
+        UnivariatePolynomial::new(coefficients, variable, None)
+    }
+
+    fn round_to_zz(self) -> ZZinstance {
+        panic!("Not implemented yet");
+    }
+}
+    // fn is_zero(self) -> bool {
+    //     self.coefficients.len() == 1 && self.coefficients[0] == T::zero()
+    // }
+
+    // fn one() -> Self {
+    //     let variable = Var::new("x", BigInt::from(0));
+    //     let mut coefficients: Vec<T> = Vec::new();
+    //     coefficients.push(T::one());
+    //     UnivariatePolynomial::new(coefficients, variable, None)
+    // }
+
+    // fn zero() -> Self {
+    //     let variable = Var::new("x", BigInt::from(0));
+    //     let mut coefficients: Vec<T> = Vec::new();
+    //     coefficients.push(T::zero());
+    //     UnivariatePolynomial::new(coefficients, variable, None)
+    // }
+
+    // fn random(_bit_length: u64) -> Self {
+    //     panic!("If you want to generate random polynomials don't use this method");
+    // }
+
+    // fn random_with_bounds(_lower_bound: BigInt, _upper_bound: BigInt) -> Self {
+    //     panic!("If you want to generate random polynomials don't use this method");
+    // }

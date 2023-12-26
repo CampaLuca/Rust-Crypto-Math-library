@@ -13,5 +13,13 @@ It included also Cryptographic primitives implemented with the same concept of G
 - Pocklington-Lehmer Test (better)
 - APRCL
 - ECPP
-
-
+- Implementing trait Operand or Instance for Polynomials and Polynomial Ring Instances OKAY
+- Implement add, sub, mul, div for Polynomials
+- AsAny method not implemented for polynomials
+- Add AES CTR without preprocessing
+- Random generator for each number type
+- Random bigdecimal to be implemented
+- Generate random polynomials and distribution for implementing Kyber, Saber, Dilithium
+- create trait for polynomials for zero poly and identity polynomial generation
+- quotient with irreducible poly MUSt recognicze when it has not to perform any operation on the given poly
+- add Barret and Montgomery modulo reduction and NTT

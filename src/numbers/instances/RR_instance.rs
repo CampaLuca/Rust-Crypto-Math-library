@@ -1,5 +1,8 @@
 use num_bigint::BigInt;
 use bigdecimal::BigDecimal;
+use crate::numbers::classes::ZZ::ZZ;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Random;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::RR::RR;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
@@ -239,6 +242,9 @@ impl Instance for RRinstance {
     fn as_any(&self) -> &dyn Any {
         self
     }
+}
+
+impl Number for RRinstance {
     fn one() -> RRinstance {
         let c = RR::new();
         c.one()
@@ -249,6 +255,21 @@ impl Instance for RRinstance {
     }
     fn is_zero(self) -> bool {
         self == RRinstance::zero()
+    }
+    fn round_to_zz(self) -> ZZinstance {
+        ZZ::new().apply(self)
+    }
+}
+
+impl Random for RRinstance {
+    fn random(bit_length: u64) -> Self {
+        let value: BigDecimal = BigDecimal::random(bit_length);
+        RR::new().new_instance(value)
+    }
+
+    fn random_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -> Self {
+        let value: BigDecimal = BigDecimal::random_with_bounds(lower_bound, upper_bound);
+        RR::new().new_instance(value)
     }
 }
 

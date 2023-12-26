@@ -25,6 +25,7 @@ pub mod numbers {
 
 pub mod matrices {
     pub mod matrix;
+    pub mod vector;
 }
 
 pub mod variables {
@@ -73,7 +74,7 @@ pub mod arith {
 pub mod cryptography {
     pub mod asymmetric {
         pub mod interfaces { pub mod interfaces; }
-        pub mod primitives { pub mod rsa; }
+        pub mod primitives { pub mod rsa; pub mod kyber;}
     }
 
     pub mod symmetric {
@@ -82,11 +83,16 @@ pub mod cryptography {
             pub mod cipher;
             pub mod data;
         }
+        pub mod modes {
+            pub mod modes;
+        }
+
         pub mod interfaces { pub mod interfaces; }
-        pub mod primitives {  }
+        pub mod primitives { pub mod aes; }
+    }
+
+    pub mod padding {
+        pub mod padding;
     }
 }
 
-// use num_bigint;
-// use num_bigint;
-// use bigdecimal;

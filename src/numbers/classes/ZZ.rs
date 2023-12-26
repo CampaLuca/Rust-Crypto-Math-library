@@ -2,12 +2,15 @@
 use num_bigint::BigInt;
 use num_bigint::RandBigInt;
 use crate::numbers::instances::ZZ_instance;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Operand;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::instances::RR_instance::RRinstance;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Class;
+use crate::poly::univariate_polynomial::UnivariatePolynomial;
 use crate::utilities::utils;
 use bigdecimal::BigDecimal;
 use std::cell::RefCell;
@@ -18,7 +21,7 @@ use rand;
 pub struct ZZ;
 
 impl Class<ZZinstance> for ZZ {
-    fn apply<T: Instance>(&self, value: T) -> ZZinstance {
+    fn apply<T: Instance + Number>(&self, value: T) -> ZZinstance {
         match value.has_type() {
             ClassTypes::BigInt => self.new_instance((*value.as_any().downcast_ref::<BigInt>().unwrap()).clone()),
             ClassTypes::U32 => { let value = BigInt::from((*value.as_any().downcast_ref::<u32>().unwrap()).clone()); self.new_instance(value) },
@@ -31,13 +34,23 @@ impl Class<ZZinstance> for ZZ {
         }
     }
 
-    fn apply_to_monomial<T: Instance>(&self, monomial: Monomial<T>) -> Monomial<ZZinstance> {
+    fn apply_to_monomial<T: Instance + Number>(&self, monomial: Monomial<T>) -> Monomial<ZZinstance> {
         Monomial::new(monomial.variables, self.apply(monomial.coefficient))
         
     }
 
     fn has_type(&self) -> ClassTypes {
         ClassTypes::ZZ
+    }
+
+    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: crate::poly::univariate_polynomial::UnivariatePolynomial<T>) -> crate::poly::univariate_polynomial::UnivariatePolynomial<ZZinstance> {
+        let mut coefficients: Vec<ZZinstance> = Vec::new();
+        for i in 0..polynomial.degree()+1 {
+            coefficients.push(self.apply(polynomial.coefficients[i].clone()));
+        }
+
+        UnivariatePolynomial::new(coefficients, polynomial.var.clone(), Some(polynomial.multiplication_algorithm))
+
     }
 }
 

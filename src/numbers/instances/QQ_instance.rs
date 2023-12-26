@@ -1,5 +1,8 @@
 use num_bigint::BigInt;
 
+use crate::numbers::classes::RR::RR;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Random;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::QQ::QQ;
 
@@ -166,6 +169,9 @@ impl Instance for QQinstance {
     fn as_any(&self) -> &dyn Any {
         self
     }
+}
+
+impl Number for QQinstance {
     fn one() -> QQinstance {
         let c = QQ::new();
         c.one()
@@ -176,6 +182,24 @@ impl Instance for QQinstance {
     }
     fn is_zero(self) -> bool {
         self == QQinstance::zero()
+    }
+
+    fn round_to_zz(self) -> ZZinstance {
+        RR::new().apply(self).round_to_zz()
+    }
+}
+
+impl Random for QQinstance {
+    fn random(bit_length: u64) -> Self {
+        let numerator: BigInt = BigInt::random(bit_length);
+        let denominator: BigInt = BigInt::random(bit_length);
+        QQ::new().create_instance(numerator, denominator)
+    }
+
+    fn random_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -> Self {
+        let numerator: BigInt = BigInt::random_with_bounds(lower_bound.clone(), upper_bound.clone());
+        let denominator: BigInt = BigInt::random_with_bounds(lower_bound, upper_bound);
+        QQ::new().create_instance(numerator, denominator)
     }
 }
 

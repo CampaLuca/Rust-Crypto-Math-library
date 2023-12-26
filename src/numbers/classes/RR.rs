@@ -1,11 +1,14 @@
 use num_bigint::BigInt;
 use bigdecimal::BigDecimal;
+use crate::numbers::numbers::Number;
+use crate::numbers::numbers::Operand;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::instances::RR_instance::RRinstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Class;
+use crate::poly::univariate_polynomial::UnivariatePolynomial;
 use std::cell::RefCell;
 
 use crate::poly::monomial::Monomial;
@@ -14,7 +17,7 @@ use crate::poly::monomial::Monomial;
 pub struct RR;
 
 impl Class<RRinstance> for RR {
-    fn apply<T: Instance>(&self, value: T) -> RRinstance {
+    fn apply<T: Instance + Number>(&self, value: T) -> RRinstance {
         match value.has_type() {
             ClassTypes::BigInt => self.new_instance(BigDecimal::from((*value.as_any().downcast_ref::<BigInt>().unwrap()).clone())),
             ClassTypes::QQ => self.new_instance(BigDecimal::from((*value.as_any().downcast_ref::<QQinstance>().unwrap()).numerator.clone())/BigDecimal::from((*value.as_any().downcast_ref::<QQinstance>().unwrap()).denominator.clone())),
@@ -25,12 +28,22 @@ impl Class<RRinstance> for RR {
         }
     }
 
-    fn apply_to_monomial<T: Instance>(&self, monomial: Monomial<T>) -> Monomial<RRinstance> {
+    fn apply_to_monomial<T: Instance + Number>(&self, monomial: Monomial<T>) -> Monomial<RRinstance> {
         Monomial::new(monomial.variables, self.apply(monomial.coefficient))
     }
 
     fn has_type(&self) -> ClassTypes {
         ClassTypes::RR
+    }
+
+    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: crate::poly::univariate_polynomial::UnivariatePolynomial<T>) -> crate::poly::univariate_polynomial::UnivariatePolynomial<RRinstance> {
+        let mut coefficients: Vec<RRinstance> = Vec::new();
+        for i in 0..polynomial.degree()+1 {
+            coefficients.push(self.apply(polynomial.coefficients[i].clone()));
+        }
+
+        UnivariatePolynomial::new(coefficients, polynomial.var.clone(), Some(polynomial.multiplication_algorithm))
+
     }
 }
 

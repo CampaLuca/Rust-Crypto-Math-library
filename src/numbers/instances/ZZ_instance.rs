@@ -1,8 +1,13 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
+use num_integer::Integer;
+use crate::algebras::FiniteField::classes::Zmod::Zmod;
 use crate::arith::primes::is_prime;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Random;
+
+use crate::numbers::numbers::StatefulClass;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::ZZ::ZZ;
 use crate::numbers::instances::RR_instance::RRinstance;
@@ -76,6 +81,12 @@ impl Eq for ZZinstance {}
 //         // match on input type?
 //     };
 // }
+
+impl ClassInstance for ZZinstance {
+    fn get_class(&self) -> Box<dyn StatefulClass> {
+        Box::new(self.class.clone().into_inner())
+    }
+}
 
 impl ZZinstance {
     pub fn next_prime(&self) -> ZZinstance {
@@ -165,6 +176,13 @@ impl std::ops::Sub<RRinstance> for ZZinstance {
     }
 }
 
+impl std::ops::Sub<i32> for ZZinstance {
+    type Output = ZZinstance;
+    fn sub(self, rhs: i32) -> ZZinstance {
+        self - ZZ::new().new_instance(BigInt::from(rhs))
+    }
+}
+
 /*
     MULTIPLICATION
 */
@@ -213,6 +231,13 @@ impl std::ops::Div<RRinstance> for ZZinstance {
     }
 }
 
+impl std::ops::Rem<ZZinstance> for ZZinstance {
+    type Output = ZmodInstance;
+    fn rem(self, rhs: ZZinstance) -> Self::Output {
+        Zmod::new(Some(rhs)).apply(self)
+    }
+}
+
 
 impl num_traits::pow::Pow<ZZinstance> for ZZinstance {
     type Output = ZZinstance;
@@ -231,7 +256,7 @@ impl num_traits::pow::Pow<BigInt> for ZZinstance {
 impl num_traits::pow::Pow<ZmodInstance> for ZZinstance {
     type Output = ZZinstance;
     fn pow(self, rhs: ZmodInstance) -> ZZinstance {
-        generic_pow::<ZZinstance>(self, rhs.value)
+        self.pow(rhs.value)
     }
 }
 
@@ -265,6 +290,8 @@ impl Instance for ZZinstance {
         self
     }
 }
+
+
 
 impl Number for ZZinstance {
     fn one() -> ZZinstance {

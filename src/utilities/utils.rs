@@ -3,11 +3,16 @@ use bigdecimal::BigDecimal;
 use bigdecimal::RoundingMode;
 use num_integer::Integer;
 use num_integer::ExtendedGcd;
+use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
+use crate::numbers::numbers::Class;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
-use crate::poly::univariate_polynomial::UnivariatePolynomial;
+use crate::numbers::numbers::StatefulClass;
+use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance;
 
 
 pub fn round_to_bigint(a: BigDecimal) -> BigInt {
@@ -25,27 +30,31 @@ pub fn modular_inverse(a: BigInt, module: BigInt) -> BigInt {
     x
 }
 
-pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) -> Vec<UnivariatePolynomial<T>> where T: Instance + Clone + PartialEq + Operand + Number {
+
+
+pub fn poly_divmod<T>(p: &UnivariatePolynomialInstance<T>, q: &UnivariatePolynomialInstance<T>) -> Vec<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance+ 'static {
+    //getting general class
+    let generator = p.coefficients[0].get_class();
     if (*q).clone() == UnivariatePolynomial::zero(q.var.clone()) {
         panic!("Cannot divide by 0");
     } else {
-        let mut l: UnivariatePolynomial<T> = UnivariatePolynomial::zero(q.var.clone());
-        let mut r: UnivariatePolynomial<T> = (*p).clone();
+        let mut l: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(q.var.clone());
+        let mut r: UnivariatePolynomialInstance<T> = (*p).clone();
         let var = q.var.clone();
         while r != UnivariatePolynomial::zero(p.var.clone()) && q.clone().degree() <= r.clone().degree() {
             let t = r.clone().leading_coefficient().div(&(q.leading_coefficient()));
             let mut coeff_m: Vec<T> = Vec::new();
             for _i in 0..(r.clone().degree()-q.clone().degree()) {
-                coeff_m.push(T::zero());
+                coeff_m.push(generator.zero().as_any().downcast_ref::<T>().unwrap().clone());
             }
-            coeff_m.push(T::one());
-            let m: UnivariatePolynomial<T> = UnivariatePolynomial::new(coeff_m, var.clone(), None);
+            coeff_m.push(generator.one().as_any().downcast_ref::<T>().unwrap().clone());
+            let m: UnivariatePolynomialInstance<T> = UnivariatePolynomial::new_instance(coeff_m, var.clone(), None);
             l = l+m.clone()*t.clone();
             r = r.clone()-((*q).clone()*m*t);
 
         }
 
-        let mut result: Vec<UnivariatePolynomial<T>> = Vec::new();
+        let mut result: Vec<UnivariatePolynomialInstance<T>> = Vec::new();
         result.push(l);
         result.push(r);
         result
@@ -70,7 +79,7 @@ pub fn poly_divmod<T>(p: &UnivariatePolynomial<T>, q: &UnivariatePolynomial<T>) 
 //             print(l,r)
 //         return(l,r)
 
-pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number {
+pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance + 'static {
     /*
     Extended Euclidean Algorithm (iterative)
     Return (d, x, y) where:
@@ -83,7 +92,7 @@ pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Ve
     let mut a_tuple= vec![a.clone(), a.class.clone().into_inner().one(var.clone()), a.class.clone().into_inner().zero(var.clone())];
     let mut b_tuple = vec![b.clone(), a.class.clone().into_inner().zero(var.clone()), a.class.clone().into_inner().one(var.clone())];
     loop {
-        let qr: Vec<UnivariatePolynomial<T>> = poly_divmod(&(a_tuple[0].unwrap_from_ring()), &(b_tuple[0].unwrap_from_ring()));
+        let qr: Vec<UnivariatePolynomialInstance<T>> = poly_divmod(&(a_tuple[0].unwrap_from_ring()), &(b_tuple[0].unwrap_from_ring()));
         let q = a.class.clone().into_inner().apply(&qr[0]);
         let r = a.class.clone().into_inner().apply(&qr[1]);
         if r == a.class.clone().into_inner().zero(var.clone()) {

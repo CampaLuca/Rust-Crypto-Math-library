@@ -2,13 +2,16 @@
 use num_bigint::BigInt;
 use crate::numbers::classes::ZZ::ZZ;
 use crate::numbers::numbers::Class;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::instances::RR_instance::RRinstance;
+use crate::numbers::numbers::PrimitiveNumber;
 use crate::numbers::numbers::Random;
+use crate::numbers::numbers::StatefulClass;
 use crate::numbers::sets::Class::ClassTypes;
 use core::any::Any;
 use std::cell::RefCell;
@@ -22,7 +25,7 @@ use crate::algebras::FiniteField::classes::Zmod::Zmod;
 #[derive(Clone)]
 pub struct ZmodInstance {
     pub class: RefCell<Zmod>,
-    pub value: BigInt
+    pub value: ZZinstance
 }
 
 impl PartialEq for ZmodInstance {
@@ -37,7 +40,7 @@ impl ZmodInstance {
         self.class.clone().into_inner().inverse((*self).clone()) 
     }
 
-    pub fn get_bigint_value(&self) -> BigInt {
+    pub fn get_bigint_value(&self) -> ZZinstance {
         self.value.clone()
     }
 }
@@ -59,6 +62,7 @@ impl std::ops::Neg for ZmodInstance {
 impl std::ops::Add<ZmodInstance> for ZmodInstance {
     type Output = ZmodInstance;
     fn add(self, rhs: ZmodInstance) -> ZmodInstance {
+        
         if rhs.class.clone().into_inner().module.is_none() {
             return  self.class.clone().into_inner().add(self, rhs)  
         } else if self.class.clone().into_inner().module.is_none() {
@@ -270,7 +274,7 @@ impl Instance for ZmodInstance {
 
 impl Number for ZmodInstance{
     fn one() -> ZmodInstance {
-        let c = Zmod::new(Some(BigInt::from(2)));
+        let c = Zmod::new(Some(ZZ::new().new_instance(BigInt::from(2))));
         c.one()
     }
     fn zero() -> ZmodInstance {
@@ -278,12 +282,16 @@ impl Number for ZmodInstance{
         c.zero()
     }
     fn is_zero(self) -> bool {
-        self.value == BigInt::zero()
+        self.value == ZZinstance::zero()
     }
     fn round_to_zz(self) -> ZZinstance {
         ZZ::new().apply(self.value)
     }
 }
+
+
+
+
     
 impl Random for ZmodInstance {
     fn random(bit_length: u64) -> Self {
@@ -332,5 +340,11 @@ impl std::fmt::Display for ZmodInstance {
         // operation succeeded or failed. Note that `write!` uses syntax which
         // is very similar to `println!`.
         write!(f, "{0}", self.value)
+    }
+}
+
+impl ClassInstance for ZmodInstance {
+    fn get_class(&self) -> Box<dyn StatefulClass> {
+        Box::new(self.class.clone().into_inner())
     }
 }

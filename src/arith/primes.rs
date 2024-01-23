@@ -201,30 +201,30 @@ pub fn get_strong_prime_in_range(ubound: BigInt, proof: bool, lower_bound: BigIn
     let lbound: ZZinstance = zz_class.apply(lower_bound);
     let mut result = BigInt::from(2);
 
-    if n < zz_class.apply(2) {
+    if n < zz_class.apply(BigInt::from(2)) {
         panic!("n must be greater than or equal to 2");
     }
 
     if n < lbound {
         panic!("n must be at least lbound");
-    } else if n == zz_class.apply(2) {
+    } else if n == zz_class.apply(BigInt::from(2)) {
         return n.value;
     }
 
-    let lbound: ZZinstance = max::<ZZinstance>(lbound, zz_class.apply(2));
+    let lbound: ZZinstance = max::<ZZinstance>(lbound, zz_class.apply(BigInt::from(2)));
 
-    if lbound > zz_class.apply(2) {
-        if lbound == zz_class.apply(3) || n <= zz_class.apply(2)*lbound.clone()-zz_class.apply(2) {
+    if lbound > zz_class.apply(BigInt::from(2)) {
+        if lbound == zz_class.apply(BigInt::from(3)) || n <= zz_class.apply(BigInt::from(2))*lbound.clone()-zz_class.apply(BigInt::from(2)) {
             // check for Betrand's postulate (proved by Chebyshev)
-            if lbound < zz_class.apply(25) || n <= zz_class.apply(6)*lbound.clone()/zz_class.apply(5) {
+            if lbound < zz_class.apply(BigInt::from(25)) || n <= zz_class.apply(BigInt::from(6))*lbound.clone()/zz_class.apply(BigInt::from(5)) {
                 // see J.nagura
-                if lbound < zz_class.apply(2070760) || n <= zz_class.apply(16598)*lbound.clone()/zz_class.apply(16597) {
+                if lbound < zz_class.apply(BigInt::from(2070760)) || n <= zz_class.apply(BigInt::from(16598))*lbound.clone()/zz_class.apply(BigInt::from(16597)) {
                     // see L. Schoenfeld, Math. Comp 1976
                     let mut smallest_prime: ZZinstance = n.clone();
                     if proof {
-                        smallest_prime = (lbound.clone()-zz_class.apply(1)).next_prime();
+                        smallest_prime = (lbound.clone()-zz_class.apply(BigInt::from(1))).next_prime();
                     } else {
-                        smallest_prime = (lbound.clone()-zz_class.apply(1)).next_probable_prime();
+                        smallest_prime = (lbound.clone()-zz_class.apply(BigInt::from(1))).next_probable_prime();
                     }
                     if smallest_prime > n {
                         panic!("There are no primes between those limits")
@@ -247,49 +247,57 @@ pub fn get_strong_prime_in_range(ubound: BigInt, proof: bool, lower_bound: BigIn
 pub fn get_strong_prime(nbits: u32, proof: bool) -> BigInt {
     let one: BigInt = BigInt::from(1);
     let upper_bound: BigInt = one.clone()<<nbits;
+
     let lower_bound: BigInt = one.clone()<<(nbits-1);
+
     let mut result: BigInt = BigInt::from(2);
     let zz_class = ZZ::new();
     let n: ZZinstance  = zz_class.apply(upper_bound);
     let lbound: ZZinstance = zz_class.apply(lower_bound);
 
-    if n < zz_class.apply(2) {
+    if n < zz_class.apply(BigInt::from(2)) {
         panic!("n must be greater than or equal to 2");
     }
 
     if n < lbound {
         panic!("n must be at least lbound");
-    } else if n == zz_class.apply(2) {
+    } else if n == zz_class.apply(BigInt::from(2)) {
         return n.value;
     }
 
-    let lbound: ZZinstance = max::<ZZinstance>(lbound, zz_class.apply(2));
 
-    if lbound > zz_class.apply(2) {
-        if lbound == zz_class.apply(3) || n <= zz_class.apply(2)*lbound.clone()-zz_class.apply(2) {
+    let mut lbound: ZZinstance = max::<ZZinstance>(lbound, zz_class.apply(BigInt::from(2)));
+
+
+    if lbound > zz_class.apply(BigInt::from(2)) {
+        if lbound == zz_class.apply(BigInt::from(3)) || n <= zz_class.apply(BigInt::from(2))*lbound.clone()-zz_class.apply(BigInt::from(2)) {
             // check for Betrand's postulate (proved by Chebyshev)
-            if lbound < zz_class.apply(25) || n <= zz_class.apply(6)*lbound.clone()/zz_class.apply(5) {
+            if lbound < zz_class.apply(BigInt::from(25)) || n <= zz_class.apply(BigInt::from(6))*lbound.clone()/zz_class.apply(BigInt::from(5)) {
                 // see J.nagura
-                if lbound < zz_class.apply(2070760) || n <= zz_class.apply(16598)*lbound.clone()/zz_class.apply(16597) {
+                if lbound < zz_class.apply(BigInt::from(2070760)) || n <= zz_class.apply(BigInt::from(16598))*lbound.clone()/zz_class.apply(BigInt::from(16597)) {
                     // see L. Schoenfeld, Math. Comp 1976
                     let mut smallest_prime: ZZinstance = n.clone();
                     if proof {
-                        smallest_prime = (lbound.clone()-zz_class.apply(1)).next_prime();
+                        smallest_prime = (lbound.clone()-zz_class.apply(BigInt::from(1))).next_prime();
                     } else {
-                        smallest_prime = (lbound.clone()-zz_class.apply(1)).next_probable_prime();
+                        smallest_prime = (lbound.clone()-zz_class.apply(BigInt::from(1))).next_probable_prime();
                     }
+
+                    println!("{}", smallest_prime);
+
                     if smallest_prime > n {
                         panic!("There are no primes between those limits")
                     }
 
-                    result = smallest_prime.value.clone();
+                    lbound = lbound.class.into_inner().apply(smallest_prime.value.clone());
                 }
             }
         }
     }
 
-    result
+    result = lbound.next_prime().value;
 
+    result
     
 
 }

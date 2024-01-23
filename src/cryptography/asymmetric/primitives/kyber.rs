@@ -1,30 +1,30 @@
 use bigdecimal::BigDecimal;
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
-use crate::{matrices::{matrix::Matrix, vector::Vector}, algebras::{Rings::{instances::PolynomialRing_instance::PolynomialRingInstance, classes::PolynomialRing::PolynomialRing}, FiniteField::{instances::Zmod_instance::ZmodInstance, classes::Zmod::Zmod}}, cryptography::asymmetric::interfaces::interfaces::{PKIinterface, KEMinterface, LatticeBased_PKIinterface}, poly::univariate_polynomial::UnivariatePolynomial, variables::vars::Var, numbers::{numbers::{Instance, Operand, Number, Class}, instances::{ZZ_instance::{ZZinstance, self}, RR_instance::RRinstance}, classes::RR::RR}, arith::random::{gen_from_uniform_distribution_with_modulo, random_byte_array}};
+use num_traits::{ToPrimitive, Pow};
+use crate::{matrices::{matrix::Matrix, vector::Vector}, algebras::{Rings::{instances::PolynomialRing_instance::PolynomialRingInstance, classes::PolynomialRing::PolynomialRing}, FiniteField::{instances::Zmod_instance::ZmodInstance, classes::Zmod::Zmod}}, cryptography::asymmetric::interfaces::interfaces::{PKIinterface, KEMinterface, LatticeBased_PKIinterface}, poly::{instances::univariate_polynomial_instance::UnivariatePolynomialInstance, classes::univariate_polynomial::UnivariatePolynomial}, variables::vars::Var, numbers::{numbers::{Class, Instance, Number, Operand, PrimitiveNumber}, instances::{ZZ_instance::{ZZinstance, self}, RR_instance::RRinstance}, classes::RR::RR}, arith::random::{gen_from_uniform_distribution_with_modulo, random_byte_array}};
 use crate::arith::random::gen_from_centered_binomial_distribution;
 use crate::numbers::classes::ZZ::ZZ;
 
 
 // kyber utilities
-fn compress<T>(poly: UnivariatePolynomial<T>, modulo: BigInt, d: usize) -> UnivariatePolynomial<ZmodInstance> where T: Instance + Clone + Eq + Operand + Number {
-    let q1: BigInt = BigInt::from(2).pow(d as u32);
+fn compress<T>(poly: UnivariatePolynomialInstance<T>, modulo: ZZinstance, d: usize) -> UnivariatePolynomialInstance<ZmodInstance> where T: Instance + Clone + Eq + Operand + Number {
+    let q1: ZZinstance =  ZZ::new().new_instance(BigInt::from(2)).pow(BigInt::from(d));
     let r_class: RR = RR::new();
-    let factor: RRinstance = r_class.new_instance(BigDecimal::from(q1.clone())/BigDecimal::from(modulo));
+    let factor: RRinstance = r_class.new_instance(BigDecimal::from(q1.value.clone())/BigDecimal::from(modulo.value));
     let mut new_poly = (r_class.apply_to_univariate_poly(poly) * factor).round() % q1; // values are yet modulo q
     new_poly
 }
 
 
-fn decompress<T>(poly: UnivariatePolynomial<T>, modulo: BigInt, d: usize) -> UnivariatePolynomial<ZmodInstance> where T: Instance + Clone + Eq + Operand + Number {
-    let q1: BigInt = BigInt::from(2).pow(d as u32);
+fn decompress<T>(poly: UnivariatePolynomialInstance<T>, modulo: ZZinstance, d: usize) -> UnivariatePolynomialInstance<ZmodInstance> where T: Instance + Clone + Eq + Operand + Number {
+    let q1: ZZinstance =  ZZ::new().new_instance(BigInt::from(2)).pow(BigInt::from(d));
     let r_class: RR = RR::new();
-    let factor: RRinstance = r_class.new_instance(BigDecimal::from(modulo.clone())/BigDecimal::from(q1));
+    let factor: RRinstance = r_class.new_instance(BigDecimal::from(modulo.value.clone())/BigDecimal::from(q1.value.clone()));
     let mut new_poly = (r_class.apply_to_univariate_poly(poly) * factor).round() % modulo; // values are yet modulo q
     new_poly
 }
 
-fn plaintext_to_poly(plaintext: Vec<u8>) -> UnivariatePolynomial<ZZinstance> {
+fn plaintext_to_poly(plaintext: Vec<u8>) -> UnivariatePolynomialInstance<ZZinstance> {
     let class = ZZ::new();
     let mut coefficients: Vec<ZZinstance> = Vec::new();
     for el in plaintext {
@@ -33,18 +33,18 @@ fn plaintext_to_poly(plaintext: Vec<u8>) -> UnivariatePolynomial<ZZinstance> {
         }    
     }
 
-    UnivariatePolynomial::new(coefficients, Var::new("x", BigInt::one()), None)
+    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::one()), None)
 }
 
 
-fn poly_to_plaintext(poly: UnivariatePolynomial<ZmodInstance>) -> Vec<u8> {
+fn poly_to_plaintext(poly: UnivariatePolynomialInstance<ZmodInstance>) -> Vec<u8> {
     let number_of_bytes = (poly.degree()+1)/8;
     let mut plaintext: Vec<u8> = Vec::new();
 
     for i in 0..number_of_bytes {
         let mut accumulator: u8 = 0;
         for bit in 0..8 {
-            accumulator = (poly.coefficients[i*8+bit].value.to_u8().unwrap() & (1<<bit)) >>bit;
+            accumulator = (poly.coefficients[i*8+bit].value.value.to_u8().unwrap() & (1<<bit)) >>bit;
         }
         plaintext.push(accumulator);
     }
@@ -97,7 +97,7 @@ pub struct Kyber1024 {
 impl Kyber512 {
     pub fn init() -> Kyber512 {
         let n: usize = 256;
-        let q: BigInt = BigInt::from(3329);
+        let q: ZZinstance = ZZ::new().new_instance(BigInt::from(3329));
         let k: usize = 2; // number of polynomials per vector
         let eta_1: usize = 3;
         let eta_2: usize = 2;
@@ -120,7 +120,7 @@ impl Kyber512 {
         }
         coefficients.push(field.one());
 
-        let irreducible_polynomial = UnivariatePolynomial::new(coefficients, var, None);
+        let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None);
         let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
 
         // creating public key, private key couple
@@ -134,9 +134,11 @@ impl Kyber512 {
         for _i in 0..k {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
-                vect.push(gen_from_uniform_distribution_with_modulo::<BigInt>(BigInt::zero(), BigInt::from(q.clone()), n-1, q.clone()).quotient(irreducible_polynomial.clone()))
+                vect.push(gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone()))
             }
+            vectors_of_public_key.push(vect);
         } 
+
         let A: Matrix<PolynomialRingInstance<ZmodInstance>> = Matrix::new(vectors_of_public_key, k, k);
         
         let mut error: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
@@ -144,6 +146,8 @@ impl Kyber512 {
             error.push((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone()));
         }
         let e: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error);
+
+        println!("{}", e.values[0]);
 
         let b = A.clone()*s.clone() + e;
 
@@ -161,7 +165,7 @@ impl Kyber512 {
 impl Kyber768 {
     pub fn init() -> Kyber768 {
         let n: usize = 256;
-        let q: BigInt = BigInt::from(3329);
+        let q: ZZinstance = ZZ::new().new_instance(BigInt::from(3329));
         let k: usize = 3; // number of polynomials per vector
         let eta_1: usize = 2;
         let eta_2: usize = 2;
@@ -184,7 +188,7 @@ impl Kyber768 {
         }
         coefficients.push(field.one());
 
-        let irreducible_polynomial = UnivariatePolynomial::new(coefficients, var, None);
+        let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None);
         let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
 
         // creating public key, private key couple
@@ -198,7 +202,7 @@ impl Kyber768 {
         for _i in 0..k {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
-                vect.push(gen_from_uniform_distribution_with_modulo::<BigInt>(BigInt::zero(), BigInt::from(q.clone()), n-1, q.clone()).quotient(irreducible_polynomial.clone()))
+                vect.push(gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone()))
             }
         } 
         let A: Matrix<PolynomialRingInstance<ZmodInstance>> = Matrix::new(vectors_of_public_key, k, k);
@@ -225,7 +229,7 @@ impl Kyber768 {
 impl Kyber1024 {
     pub fn init() -> Kyber1024 {
         let n: usize = 256;
-        let q: BigInt = BigInt::from(3329);
+        let q: ZZinstance = ZZ::new().new_instance(BigInt::from(3329));
         let k: usize = 4; // number of polynomials per vector
         let eta_1: usize = 2;
         let eta_2: usize = 2;
@@ -248,7 +252,7 @@ impl Kyber1024 {
         }
         coefficients.push(field.one());
 
-        let irreducible_polynomial = UnivariatePolynomial::new(coefficients, var, None);
+        let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None);
         let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
 
         // creating public key, private key couple
@@ -262,7 +266,7 @@ impl Kyber1024 {
         for _i in 0..k {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
-                vect.push(gen_from_uniform_distribution_with_modulo::<BigInt>(BigInt::zero(), BigInt::from(q.clone()), n-1, q.clone()).quotient(irreducible_polynomial.clone()))
+                vect.push(gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), BigInt::from(q.value.clone()), n-1, q.value.clone()).quotient(irreducible_polynomial.clone()))
             }
         } 
         let A: Matrix<PolynomialRingInstance<ZmodInstance>> = Matrix::new(vectors_of_public_key, k, k);
@@ -273,7 +277,7 @@ impl Kyber1024 {
         }
         let e: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error);
 
-        let b = A.clone()*s.clone() + e;
+        let b: Vector<PolynomialRingInstance<ZmodInstance>> = A.clone()*s.clone() + e;
 
         public_keys.push((A, b));
         private_keys.push(s);
@@ -291,8 +295,8 @@ impl LatticeBased_PKIinterface for Kyber512 {
             panic!("Plaintext to big. Only 8 bytes can be encrypted");
         }
 
-        let poly_plaintext: UnivariatePolynomial<ZZinstance> = plaintext_to_poly(plaintext);
-        let m_scaled: UnivariatePolynomial<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
+        let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext);
+        let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
         let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![m_scaled.quotient(self.ring.irreducible_polynomial.clone())]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
@@ -360,8 +364,8 @@ impl LatticeBased_PKIinterface for Kyber768 {
             panic!("Plaintext to big. Only 8 bytes can be encrypted");
         }
 
-        let poly_plaintext: UnivariatePolynomial<ZZinstance> = plaintext_to_poly(plaintext);
-        let m_scaled: UnivariatePolynomial<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
+        let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext);
+        let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
         let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![m_scaled.quotient(self.ring.irreducible_polynomial.clone())]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
@@ -428,8 +432,8 @@ impl LatticeBased_PKIinterface for Kyber1024 {
             panic!("Plaintext to big. Only 8 bytes can be encrypted");
         }
 
-        let poly_plaintext: UnivariatePolynomial<ZZinstance> = plaintext_to_poly(plaintext);
-        let m_scaled: UnivariatePolynomial<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
+        let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext);
+        let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
         let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![m_scaled.quotient(self.ring.irreducible_polynomial.clone())]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {

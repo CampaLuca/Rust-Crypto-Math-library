@@ -1,17 +1,20 @@
 //use sagemath::numbers::sets::General_Class;
 
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
+use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
 use crate::utilities::utils;
 use std::cell::RefCell;
 use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
-use crate::poly::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance;
 use crate::variables::vars::Var;
 // wrapper on ZZ_instance
 #[derive(Clone)]
 pub struct PolynomialRing<T> {
-    pub irreducible_polynomial: UnivariatePolynomial<T>
+    pub irreducible_polynomial: UnivariatePolynomialInstance<T>,
+    pub ntt_enabled: bool
 }
 
 
@@ -35,12 +38,12 @@ pub struct PolynomialRing<T> {
 //     }
 // }
 
-impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand + Number {
-    pub fn apply(&self, x: &UnivariatePolynomial<T>) -> PolynomialRingInstance<T> {
+impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance + 'static {
+    pub fn apply(&self, x: &UnivariatePolynomialInstance<T>) -> PolynomialRingInstance<T> {
         if self.irreducible_polynomial.degree() > x.degree() {
             self.new_instance(x.var.clone(), x.coefficients.clone())
         } else {
-            let qr: Vec<UnivariatePolynomial<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
+            let qr: Vec<UnivariatePolynomialInstance<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
             self.new_instance(qr[1].var.clone(), qr[1].coefficients.clone())
         }
     }
@@ -66,12 +69,12 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
 
 
 impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number {
-    pub fn new(irreducible_polynomial: UnivariatePolynomial<T>) -> PolynomialRing<T> {
-        PolynomialRing { irreducible_polynomial: irreducible_polynomial } 
+    pub fn new(irreducible_polynomial: UnivariatePolynomialInstance<T>) -> PolynomialRing<T> {
+        PolynomialRing { irreducible_polynomial: irreducible_polynomial, ntt_enabled: false } 
     }
 
     pub fn new_instance(&self, var: Var, coefficients: Vec<T>) -> PolynomialRingInstance<T> {
-        PolynomialRingInstance { class: RefCell::new(self.clone()), var: var, coefficients: coefficients } 
+        PolynomialRingInstance { class: RefCell::new(self.clone()), var: var, coefficients: coefficients, ntt_form: false } 
     }
 
     pub fn add(&self, x: PolynomialRingInstance<T>, y: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
@@ -126,6 +129,36 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
         self.new_instance(x.var, coeff) 
     }
 
+    
+
+    
+
+    pub fn neg(&self, x: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
+        let coefficients = x.coefficients.into_iter().map(| x| {
+            x.neg()
+        }).collect();
+
+        self.new_instance(x.var, coefficients)   
+    }
+
+    
+}
+
+
+impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static{
+    pub fn div(&self, x: PolynomialRingInstance<T>, y: PolynomialRingInstance<T>) -> PolynomialRingInstance<T>  {
+        x * y.inverse()
+    }
+    
+    pub fn inverse(&self, x: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
+        let result: Vec<PolynomialRingInstance<T>> = utils::egcd(x.clone(), self.apply(&self.irreducible_polynomial));
+        if result[0] != self.clone().one(x.var) {
+            panic!("The inverse does not exist");
+        } else {
+            return result[1].clone()
+        }
+    }
+
     pub fn mul(&self, x: PolynomialRingInstance<T>, y: PolynomialRingInstance<T>)-> PolynomialRingInstance<T>  {
         // schoolbook multiplication, then reducing by irreducible poly thanks to divmod
         let len = x.coefficients.len() + y.coefficients.len() -1;
@@ -139,30 +172,8 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
             }
         }
 
-        let current_poly = UnivariatePolynomial::new(coeff, x.var.clone(), None);
+        let current_poly = UnivariatePolynomial::new_instance(coeff, x.var.clone(), None);
         self.apply(&current_poly)
     }
-
-    pub fn div(&self, x: PolynomialRingInstance<T>, y: PolynomialRingInstance<T>) -> PolynomialRingInstance<T>  {
-        x * y.inverse()
-    }
-
-    pub fn neg(&self, x: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
-        let coefficients = x.coefficients.into_iter().map(| x| {
-            x.neg()
-        }).collect();
-
-        self.new_instance(x.var, coefficients)   
-    }
-
-    pub fn inverse(&self, x: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
-        let result: Vec<PolynomialRingInstance<T>> = utils::egcd(x.clone(), self.apply(&self.irreducible_polynomial));
-        if result[0] != self.clone().one(x.var) {
-            panic!("The inverse does not exist");
-        } else {
-            return result[1].clone()
-        }
-    }
 }
-
 

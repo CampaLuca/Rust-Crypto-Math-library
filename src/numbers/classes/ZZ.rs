@@ -4,24 +4,26 @@ use num_bigint::RandBigInt;
 use crate::numbers::instances::ZZ_instance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
+use crate::numbers::numbers::StatefulClass;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::instances::RR_instance::RRinstance;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Class;
-use crate::poly::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::classes::monomial::Monomial;
+use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::instances::monomial_instance::MonomialInstance;
 use crate::utilities::utils;
 use bigdecimal::BigDecimal;
 use std::cell::RefCell;
-use crate::poly::monomial::Monomial;
 use rand;
 
 #[derive(Clone)]
 pub struct ZZ;
 
 impl Class<ZZinstance> for ZZ {
-    fn apply<T: Instance + Number>(&self, value: T) -> ZZinstance {
+    fn apply<T: Instance>(&self, value: T) -> ZZinstance {
         match value.has_type() {
             ClassTypes::BigInt => self.new_instance((*value.as_any().downcast_ref::<BigInt>().unwrap()).clone()),
             ClassTypes::U32 => { let value = BigInt::from((*value.as_any().downcast_ref::<u32>().unwrap()).clone()); self.new_instance(value) },
@@ -34,8 +36,8 @@ impl Class<ZZinstance> for ZZ {
         }
     }
 
-    fn apply_to_monomial<T: Instance + Number>(&self, monomial: Monomial<T>) -> Monomial<ZZinstance> {
-        Monomial::new(monomial.variables, self.apply(monomial.coefficient))
+    fn apply_to_monomial<T: Instance + Number>(&self, monomial: MonomialInstance<T>) -> MonomialInstance<ZZinstance> {
+        Monomial::new_monomial(monomial.variables, self.apply(monomial.coefficient))
         
     }
 
@@ -43,13 +45,13 @@ impl Class<ZZinstance> for ZZ {
         ClassTypes::ZZ
     }
 
-    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: crate::poly::univariate_polynomial::UnivariatePolynomial<T>) -> crate::poly::univariate_polynomial::UnivariatePolynomial<ZZinstance> {
+    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance<T>) -> crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance<ZZinstance> {
         let mut coefficients: Vec<ZZinstance> = Vec::new();
         for i in 0..polynomial.degree()+1 {
             coefficients.push(self.apply(polynomial.coefficients[i].clone()));
         }
 
-        UnivariatePolynomial::new(coefficients, polynomial.var.clone(), Some(polynomial.multiplication_algorithm))
+        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm)
 
     }
 }
@@ -107,6 +109,20 @@ impl ZZ {
         let value = rng.gen_bigint_range(&lbound.value, &ubound.value);
         self.apply(value)
     }
+}
+
+
+impl StatefulClass for ZZ {
+    fn one(&self) -> Box<dyn Instance> {
+        Box::new(self.apply(BigInt::from(1)))
+    }
+
+    fn zero(&self) -> Box<dyn Instance> {
+        Box::new(self.apply(BigInt::from(0)))
+    }
+
+  
+
 }
 
 

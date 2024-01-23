@@ -1,10 +1,13 @@
 use num_bigint::BigInt;
 use num_traits::Num;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::numbers::ring_poly_pow;
-use crate::poly::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance;
+use std::any::Any;
 use std::cell::RefCell;
 use crate::algebras::Rings::classes::PolynomialRing::PolynomialRing;
 use crate::variables::vars::Var;
@@ -16,7 +19,8 @@ use std::cmp::Ordering;
 pub struct PolynomialRingInstance<T> {
     pub class: RefCell<PolynomialRing<T>>,
     pub var: Var,
-    pub coefficients: Vec<T>
+    pub coefficients: Vec<T>,
+    pub ntt_form: bool
 }
 
 impl<T> PartialEq for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone {
@@ -37,12 +41,16 @@ impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operan
         (*self).coefficients[(*self).coefficients.len()-1].clone()
     }
 
+    
+
+    pub fn unwrap_from_ring(&self) -> UnivariatePolynomialInstance<T> {
+        UnivariatePolynomial::new_instance(self.coefficients.clone(), self.var.clone(), None)
+    }
+}
+
+impl<T> PolynomialRingInstance<T> where T: ClassInstance + Instance + 'static + Clone + PartialEq + Operand + Number {
     pub fn inverse(self) -> PolynomialRingInstance<T> {
         self.class.clone().into_inner().inverse(self)
-    }
-
-    pub fn unwrap_from_ring(&self) -> UnivariatePolynomial<T> {
-        UnivariatePolynomial::new(self.coefficients.clone(), self.var.clone(), None)
     }
 }
 
@@ -91,7 +99,7 @@ impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // MULTIPLICATION by an other polynomial in the RING
-impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: 'static + Number + Instance + PartialEq  + Clone + Operand + ClassInstance{
     type Output = PolynomialRingInstance<T>;
     fn mul(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -114,7 +122,7 @@ impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Number + Instanc
 }
 
 // DIVISION
-impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: 'static + ClassInstance + Number + Instance + PartialEq  + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn div(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -130,7 +138,7 @@ impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 
 
 // to be corrected TODO
-impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq + Clone + Operand {
+impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: 'static + ClassInstance + Number + Instance + PartialEq + Clone + Operand {
     type Output = PolynomialRingInstance<T>;
     fn pow(self, rhs: BigInt) -> PolynomialRingInstance<T> {
         ring_poly_pow::<T>(self.clone(), rhs)
@@ -176,21 +184,8 @@ impl<T> Instance for PolynomialRingInstance<T> where T: Instance + PartialEq + C
     }
 }
 
-impl<T> Number for PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand {
-    fn zero() -> Self {
-        panic!("Method not implemented");
-    }
 
-    fn is_zero(self) -> bool {
-        panic!("Method not implemented");
-    }
-    fn one() -> Self {
-        panic!("Method not implemented");
-    }
-    fn round_to_zz(self) -> crate::numbers::instances::ZZ_instance::ZZinstance {
-        panic!("Method not implemented");
-    }
-}
+
     
 
     // fn random(bit_length: u64) -> Self {
@@ -263,10 +258,16 @@ impl<T> std::fmt::Display for PolynomialRingInstance<T> where T: Instance + Numb
         let mut printable = format!("");
 
         for (i, coeff) in self.coefficients.iter().enumerate() {
+
+            if coeff.clone().is_zero() {
+                continue;
+            }
             let mut sign: String = format!("");
             if coeff.less_than(&(T::zero())) {
-                sign = format!("-");
-            } 
+                sign = format!("");
+            } else {
+                sign = format!("+");
+            }
 
             let mut power: String = format!("");
             if i > 0 {
@@ -283,3 +284,9 @@ impl<T> std::fmt::Display for PolynomialRingInstance<T> where T: Instance + Numb
         write!(f, "{0}", printable)
     }
 }
+
+// impl<T> ClassInstance for PolynomialRingInstance<T> where T: Instance{
+//     fn get_class(&self) -> PolynomialRing<T> {
+//         self.class
+//     }
+// }

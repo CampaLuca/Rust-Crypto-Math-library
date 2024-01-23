@@ -1,7 +1,15 @@
 pub mod poly {
-    pub mod polynomial;
-    pub mod monomial;
-    pub mod univariate_polynomial;
+    pub mod classes {
+        pub mod polynomial;
+        pub mod monomial;
+        pub mod univariate_polynomial;
+    }
+
+    pub mod instances {
+    pub mod polynomial_instance;
+    pub mod monomial_instance;
+    pub mod univariate_polynomial_instance;
+    }
 }
 pub mod numbers {
     pub mod sets {
@@ -64,6 +72,10 @@ pub mod algebras {
             pub mod Zmod_instance;
         }
     }
+}
+
+pub mod transform {
+    pub mod ntt;
 }
 
 pub mod arith {

@@ -17,3 +17,11 @@ The aim is to put withing a single library all the currectly used schemes and so
 - Random bigdecimal 
 - create trait for polynomials for zero poly and identity polynomial generation
 - add Barret and Montgomery modulo reduction and NTT
+- create UnivariatePoly class, the same for poly etc... -> then Instance implement get_class -> this will substitute the T::zero() from instance which does not have any sense. It is the class that can generate elements, not the opposite.
+
+
+Numeric types: BigDecimal, BigInt, BigUint
+
+Classes: 
+
+Instances:

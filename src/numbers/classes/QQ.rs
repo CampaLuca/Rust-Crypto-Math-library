@@ -2,22 +2,27 @@ use num_bigint::BigInt;
 use bigdecimal::BigDecimal;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
+use crate::numbers::numbers::PrimitiveNumber;
+use crate::numbers::numbers::StatefulClass;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::instances::ZZ_instance::ZZinstance;
 use crate::numbers::instances::QQ_instance::QQinstance;
 use crate::numbers::instances::RR_instance::RRinstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Class;
-use crate::poly::univariate_polynomial::UnivariatePolynomial;
+use crate::poly;
+use crate::poly::classes::monomial::Monomial;
+use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
+use crate::poly::instances::univariate_polynomial_instance::UnivariatePolynomialInstance;
 use num_integer::Integer;
 use std::cell::RefCell;
-use crate::poly::monomial::Monomial;
+use crate::poly::instances::monomial_instance::MonomialInstance;
 
 
 #[derive(Clone)]
 pub struct QQ;
 impl Class<QQinstance> for QQ {
-    fn apply<T: Number + Instance>(&self, value: T) -> QQinstance {
+    fn apply<T: Instance>(&self, value: T) -> QQinstance {
         match value.has_type() {
             ClassTypes::BigInt => {
                 let one: BigInt = BigInt::one();
@@ -34,22 +39,21 @@ impl Class<QQinstance> for QQ {
         }
     }
 
-    fn apply_to_monomial<T: Instance + Number>(&self, monomial: Monomial<T>) -> Monomial<QQinstance> {
-        Monomial::new(monomial.variables, self.apply(monomial.coefficient))
+    fn apply_to_monomial<T: Instance + Number>(&self, monomial: MonomialInstance<T>) -> MonomialInstance<QQinstance> {
+        Monomial::new_monomial(monomial.variables, self.apply(monomial.coefficient))
     }
 
     fn has_type(&self) -> ClassTypes {
         ClassTypes::QQ
     }
 
-    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: crate::poly::univariate_polynomial::UnivariatePolynomial<T>) -> crate::poly::univariate_polynomial::UnivariatePolynomial<QQinstance> {
+    fn apply_to_univariate_poly<T: Instance + Number + Operand + Clone + PartialEq>(&self, polynomial: UnivariatePolynomialInstance<T>) -> UnivariatePolynomialInstance<QQinstance> {
         let mut coefficients: Vec<QQinstance> = Vec::new();
         for i in 0..polynomial.degree()+1 {
             coefficients.push(self.apply(polynomial.coefficients[i].clone()));
         }
 
-        UnivariatePolynomial::new(coefficients, polynomial.var.clone(), Some(polynomial.multiplication_algorithm))
-
+        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm)
     }
 }
 
@@ -119,3 +123,15 @@ impl QQ {
 }
 
 
+impl StatefulClass for QQ {
+    fn one(&self) -> Box<dyn Instance> {
+        Box::new(self.one())
+    }
+
+    fn zero(&self) -> Box<dyn Instance> {
+        Box::new(self.zero())
+    }
+
+  
+
+}

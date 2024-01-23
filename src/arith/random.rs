@@ -1,7 +1,7 @@
 use rand::Rng;
 use num_bigint::{BigInt, BigUint, RandomBits, RandBigInt};
 
-use crate::{poly::univariate_polynomial::UnivariatePolynomial, variables::vars::Var, numbers::{classes::ZZ::ZZ, numbers::{Instance, Operand, Class, Random, Number}, instances::ZZ_instance::ZZinstance}, algebras::FiniteField::{classes::Zmod::Zmod, instances::Zmod_instance::ZmodInstance}};
+use crate::{poly::{classes::univariate_polynomial::UnivariatePolynomial, instances::univariate_polynomial_instance::UnivariatePolynomialInstance}, variables::vars::Var, numbers::{classes::ZZ::ZZ, numbers::{Instance, Operand, Class, Random, Number}, instances::ZZ_instance::ZZinstance}, algebras::FiniteField::{classes::Zmod::Zmod, instances::Zmod_instance::ZmodInstance}};
 
 pub fn get_random_bigint(length: u64) -> BigInt {
     let mut rng = rand::thread_rng();
@@ -23,41 +23,41 @@ pub fn get_random_bigint_with_bounds(lower_bound: BigInt, upper_bound: BigInt) -
 }
 
 
-pub fn gen_from_uniform_distribution<T>(lower_bound: BigInt, upper_bound: BigInt, degree: usize) -> UnivariatePolynomial<T> where T: Operand + Instance + Clone + Eq + Random + Number{
+pub fn gen_from_uniform_distribution<T>(lower_bound: BigInt, upper_bound: BigInt, degree: usize) -> UnivariatePolynomialInstance<T> where T: Operand + Instance + Clone + Eq + Random + Number{
     let mut coefficients: Vec<T> = Vec::new();
     for _i in 0..(degree+1) {
         coefficients.push(T::random_with_bounds(lower_bound.clone(), upper_bound.clone()));
     }
     
-    UnivariatePolynomial::new(coefficients, Var::new("x", BigInt::from(1)), None)
+    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None)
 
 }
 
-pub fn gen_from_uniform_distribution_with_modulo<T>(lower_bound: BigInt, upper_bound: BigInt, degree: usize, modulo: BigInt) -> UnivariatePolynomial<ZmodInstance> where T: Random +Operand + Instance + Clone + Eq + Number{
-    let field: Zmod = Zmod::new(Some(modulo));
+pub fn gen_from_uniform_distribution_with_modulo<T>(lower_bound: BigInt, upper_bound: BigInt, degree: usize, modulo: BigInt) -> UnivariatePolynomialInstance<ZmodInstance> where T: Random +Operand + Instance + Clone + Eq + Number{
+    let field: Zmod = Zmod::new(Some(ZZ::new().new_instance(modulo)));
     
     let mut coefficients: Vec<ZmodInstance> = Vec::new();
     for _i in 0..(degree+1) {
         coefficients.push(field.apply(T::random_with_bounds(lower_bound.clone(), upper_bound.clone())));
     }
     
-    UnivariatePolynomial::new(coefficients, Var::new("x", BigInt::from(1)), None)
+    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None)
 
 }
 
 
-fn aux_cbd(number_of_coefficients: usize, eta: usize) -> UnivariatePolynomial<ZZinstance> {
+fn aux_cbd(number_of_coefficients: usize, eta: usize) -> UnivariatePolynomialInstance<ZZinstance> {
     let mut i: usize = 1;
-    let mut p: UnivariatePolynomial<ZZinstance> = gen_from_uniform_distribution::<ZZinstance>(BigInt::from(0), BigInt::from(2), number_of_coefficients-1);
+    let mut p: UnivariatePolynomialInstance<ZZinstance> = gen_from_uniform_distribution::<ZZinstance>(BigInt::from(0), BigInt::from(2), number_of_coefficients-1);
     while i < eta {
-        let p1: UnivariatePolynomial<ZZinstance> = gen_from_uniform_distribution::<ZZinstance>(BigInt::from(0), BigInt::from(2), number_of_coefficients-1);
+        let p1: UnivariatePolynomialInstance<ZZinstance> = gen_from_uniform_distribution::<ZZinstance>(BigInt::from(0), BigInt::from(2), number_of_coefficients-1);
         p = p + p1;
         i += 1;
     }
 
     p
 }
-pub fn gen_from_centered_binomial_distribution(number_of_coefficients: usize, eta: usize) -> UnivariatePolynomial<ZZinstance> {
+pub fn gen_from_centered_binomial_distribution(number_of_coefficients: usize, eta: usize) -> UnivariatePolynomialInstance<ZZinstance> {
     let a = aux_cbd(number_of_coefficients, eta);
     let b = aux_cbd(number_of_coefficients, eta);
     a - b

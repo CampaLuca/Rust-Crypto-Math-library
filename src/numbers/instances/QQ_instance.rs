@@ -1,8 +1,10 @@
 use num_bigint::BigInt;
 
 use crate::numbers::classes::RR::RR;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Random;
+use crate::numbers::numbers::StatefulClass;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::numbers::classes::QQ::QQ;
 
@@ -168,6 +170,12 @@ impl Instance for QQinstance {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl ClassInstance for QQinstance {
+    fn get_class(&self) -> Box<dyn StatefulClass> {
+        Box::new(self.class.clone().into_inner())
     }
 }
 

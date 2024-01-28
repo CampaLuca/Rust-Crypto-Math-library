@@ -1,10 +1,12 @@
+use std::fmt::Display;
+
 use either::Either;
 use either::Either::Right;
 use either::Left;
 use num_bigint::BigInt;
 use crate::algebras::Rings::classes::PolynomialRing::PolynomialRing;
 use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
-use crate::numbers::numbers::{ClassInstance, Instance, Number, Operand};
+use crate::numbers::numbers::{Class, ClassInstance, Instance, Number, Operand, StatefulClass};
 use crate::matrices::vector::Vector;
 use crate::numbers::sets::Class::ClassTypes;
 use crate::poly::classes::univariate_polynomial::UnivariatePolynomial;
@@ -82,11 +84,13 @@ impl<T> std::ops::Sub for Matrix<T> where T: Instance + Clone + Operand + Partia
 }
 
 
-impl<T> std::ops::Mul for Matrix<PolynomialRingInstance<T>> where T: 'static + Instance + Clone + Operand + ClassInstance + PartialEq + Number {
+impl<T> std::ops::Mul for Matrix<PolynomialRingInstance<T>> where T: Display + 'static + Instance + Clone + Operand + ClassInstance + PartialEq + Number {
     type Output = Either<Matrix<PolynomialRingInstance<T>>, Vector<PolynomialRingInstance<T>>>;
     fn mul(self, rhs: Self) -> Self::Output {
         if self.columns == rhs.rows {
             let generator: PolynomialRing<T> = self.values[0][0].clone().class.into_inner().clone();
+            let generator_values: Box<dyn StatefulClass> = self.values[0][0].clone().coefficients[0].get_class();
+
             let var: Var = self.values[0][0].var.clone();
             let mut result_vectors: Vec<Vec<PolynomialRingInstance<T>>> = Vec::new();
             
@@ -94,7 +98,7 @@ impl<T> std::ops::Mul for Matrix<PolynomialRingInstance<T>> where T: 'static + I
                 let mut temp_vector: Vec<PolynomialRingInstance<T>> = Vec::new();
                 for i in 0..self.rows {
                     
-                    let mut accumulator: PolynomialRingInstance<T> = generator.clone().zero(var.clone());
+                    let mut accumulator: PolynomialRingInstance<T> = generator.clone().zero(var.clone(), &generator_values);
 
                     for old_columns in 0..self.columns {
                         for old_rows in 0..rhs.rows {
@@ -155,15 +159,17 @@ impl<T> std::ops::Mul for Matrix<T> where T: Instance +  Clone + Operand + Parti
 }
 
 
-impl<T> std::ops::Mul<Vector<PolynomialRingInstance<T>>> for Matrix<PolynomialRingInstance<T>> where T: 'static + ClassInstance + Instance + Clone + Operand + PartialEq + Number {
+impl<T> std::ops::Mul<Vector<PolynomialRingInstance<T>>> for Matrix<PolynomialRingInstance<T>> where T: Display + 'static + ClassInstance + Instance + Clone + Operand + PartialEq + Number {
     type Output = Vector<PolynomialRingInstance<T>>;
     fn mul(self, rhs: Vector<PolynomialRingInstance<T>>) -> Self::Output {
         if self.columns == rhs.len {
             let variable: Var = self.values[0][0].var.clone();
             let generator: PolynomialRing<T> = self.values[0][0].clone().class.into_inner().clone();
+            let generator_values: Box<dyn StatefulClass> = self.values[0][0].clone().coefficients[0].get_class();
+
             let mut temp_vector: Vec<PolynomialRingInstance<T>> = Vec::new();
             for i in 0..self.rows {
-                let mut accumulator: PolynomialRingInstance<T> = generator.clone().zero(variable.clone());
+                let mut accumulator: PolynomialRingInstance<T> = generator.clone().zero(variable.clone(), &generator_values);
 
                 for old_columns in 0..self.columns {
                     for old_rows in 0..rhs.len {
@@ -225,7 +231,7 @@ impl<T> std::ops::Div for Matrix<T> where T: Instance + Clone + Operand + Partia
 *   Matrix functions for Univariate Polynomials
 *
 */
-impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Eq + Number{
+impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Eq + Number + ClassInstance + 'static{
 
 
     pub fn get_dimension(&self) -> (usize, usize) {
@@ -355,7 +361,8 @@ impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
             return (self.values[0][0].mul(&self.values[1][1])).sub(&(self.values[0][1].mul(&self.values[1][0])));
         } else {
             let variable: Var = self.values[0][0].var.clone();
-            let mut determinant: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(variable);
+            let generator: Box<dyn StatefulClass> = self.values[0][0].coefficients[0].get_class();
+            let mut determinant: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(variable, &generator);
 
             for r in 0..self.rows {
                 if r & 0x1 == 1 {
@@ -376,7 +383,9 @@ impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
         let variable: Var = self.values[0][0].var.clone();
 
         let determinant = self.determinant();
-        if determinant == UnivariatePolynomial::zero(variable) {
+        let generator: Box<dyn StatefulClass> = self.values[0][0].coefficients[0].get_class();
+
+        if determinant == UnivariatePolynomial::zero(variable, &generator) {
             panic!("[ERROR] Determinant of matrix is zero");
         }
 
@@ -425,32 +434,33 @@ impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
     }
 
 
-    pub fn zero_matrix(rows: usize, columns: usize) -> Matrix<UnivariatePolynomialInstance<T>> {
-        let mut container: Vec<Vec<UnivariatePolynomialInstance<T>>> = Vec::new();
-        let variable: Var = Var::new("x", BigInt::from(1));
-        for _c in 0..columns {
-            container.push(vec![UnivariatePolynomial::zero(variable.clone()); rows]);
-        }
+    // pub fn zero_matrix(rows: usize, columns: usize) -> Matrix<UnivariatePolynomialInstance<T>> {
+    //     let mut container: Vec<Vec<UnivariatePolynomialInstance<T>>> = Vec::new();
+    //     let variable: Var = Var::new("x", BigInt::from(1));
+    //     let generator: Box<dyn StatefulClass> = T::get_class(&self);
+    //     for _c in 0..columns {
+    //         container.push(vec![UnivariatePolynomial::zero(variable.clone()); rows]);
+    //     }
 
-        Matrix::new(container, rows, columns)
-    }
-    pub fn identity_matrix(dim: usize) -> Matrix<UnivariatePolynomialInstance<T>> {
-        let mut container: Vec<Vec<UnivariatePolynomialInstance<T>>> = Vec::new();
-        let variable: Var = Var::new("x", BigInt::from(1));
-        for c in 0..dim {
-            let mut vector: Vec<UnivariatePolynomialInstance<T>> = Vec::new();
-            for r in 0..dim {
-                if r == c {
-                    vector.push(UnivariatePolynomial::one(variable.clone()));
-                } else {
-                    vector.push(UnivariatePolynomial::zero(variable.clone()));
-                }
-            }
-            container.push(vector);
-        }
+    //     Matrix::new(container, rows, columns)
+    // }
+    // pub fn identity_matrix(dim: usize) -> Matrix<UnivariatePolynomialInstance<T>> {
+    //     let mut container: Vec<Vec<UnivariatePolynomialInstance<T>>> = Vec::new();
+    //     let variable: Var = Var::new("x", BigInt::from(1));
+    //     for c in 0..dim {
+    //         let mut vector: Vec<UnivariatePolynomialInstance<T>> = Vec::new();
+    //         for r in 0..dim {
+    //             if r == c {
+    //                 vector.push(UnivariatePolynomial::one(variable.clone()));
+    //             } else {
+    //                 vector.push(UnivariatePolynomial::zero(variable.clone()));
+    //             }
+    //         }
+    //         container.push(vector);
+    //     }
 
-        Matrix::new(container, dim, dim)
-    }
+    //     Matrix::new(container, dim, dim)
+    // }
     
 
 }
@@ -460,7 +470,7 @@ impl<T> Matrix<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
  *  Matrix functions for Polynomial Rings
  * 
  */
-impl<T> Matrix<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Eq + Number{
+impl<T> Matrix<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Eq + Number + ClassInstance + 'static{
 
 
     pub fn get_dimension(&self) -> (usize, usize) {
@@ -591,7 +601,9 @@ impl<T> Matrix<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
         } else {
             let variable: Var = self.values[0][0].var.clone();
             let generator: PolynomialRing<T> = self.values[0][0].clone().class.into_inner().clone();
-            let mut determinant: PolynomialRingInstance<T> = generator.zero(variable);
+            let generator_values: Box<dyn StatefulClass> = self.values[0][0].clone().coefficients[0].get_class();
+
+            let mut determinant: PolynomialRingInstance<T> = generator.zero(variable, &generator_values);
 
             for r in 0..self.rows {
                 if r & 0x1 == 1 {
@@ -611,8 +623,10 @@ impl<T> Matrix<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
         }
         let variable: Var = self.values[0][0].var.clone();
         let generator: PolynomialRing<T> = self.values[0][0].clone().class.into_inner().clone();
+        let generator_values: Box<dyn StatefulClass> = self.values[0][0].clone().coefficients[0].get_class();
+
         let determinant = self.determinant();
-        if determinant == generator.zero(variable) {
+        if determinant == generator.zero(variable, &generator_values) {
             panic!("[ERROR] Determinant of matrix is zero");
         }
 

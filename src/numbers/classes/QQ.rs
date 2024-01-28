@@ -53,7 +53,7 @@ impl Class<QQinstance> for QQ {
             coefficients.push(self.apply(polynomial.coefficients[i].clone()));
         }
 
-        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm, polynomial.clean_coefficients)
     }
 }
 

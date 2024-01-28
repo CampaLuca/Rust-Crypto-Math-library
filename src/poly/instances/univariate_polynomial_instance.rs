@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::cell::RefCell;
+use std::fmt::Display;
 
 use num_bigint::BigInt;
 use num_traits::Num;
@@ -48,7 +49,8 @@ fn clean<T>(mut coeff: Vec<T>) -> Vec<T> where T: Instance + Operand + Clone + N
 pub struct UnivariatePolynomialInstance<T> {
     pub class: RefCell<UnivariatePolynomial>,
     pub coefficients: Vec<T>,
-    pub var: Var
+    pub var: Var,
+    pub clean_coefficients: bool
 }
 
 impl<T> PartialEq for UnivariatePolynomialInstance<T> where T: Instance + PartialEq {
@@ -59,10 +61,10 @@ impl<T> PartialEq for UnivariatePolynomialInstance<T> where T: Instance + Partia
 impl<T> Eq for UnivariatePolynomialInstance<T> where T: Instance + PartialEq {}
 
 
-impl<T> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static {
-    pub fn quotient(self, irreducible_poly: UnivariatePolynomialInstance<T>) -> PolynomialRingInstance<T> {
+impl<T> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static + Display{
+    pub fn quotient(self, irreducible_poly: UnivariatePolynomialInstance<T>, ntt_form: bool) -> PolynomialRingInstance<T> {
         let class: PolynomialRing<T> = PolynomialRing::new(irreducible_poly);
-        class.apply(&self) //(self.var, self.coefficients)
+        class.apply(&self,  ntt_form) //(self.var, self.coefficients)
     }
 }
 
@@ -75,7 +77,7 @@ impl<T> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + Pa
         for i in 0..self.degree()+1 {
             coefficients.push((self.coefficients[i].clone()).round_to_zz());
         }
-        UnivariatePolynomial::new_instance(coefficients, self.var.clone(), self.class.clone().into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, self.var.clone(), self.class.clone().into_inner().multiplication_algorithm, self.clean_coefficients)
 
     }
 
@@ -90,11 +92,11 @@ impl<T> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + Pa
    
 
     pub fn one(v: Var) -> UnivariatePolynomialInstance<T> {
-        UnivariatePolynomial::new_instance(vec![T::one()], v, None)
+        UnivariatePolynomial::new_instance(vec![T::one()], v, None, true)
     }
 
     pub fn zero(v: Var) -> UnivariatePolynomialInstance<T> {
-        UnivariatePolynomial::new_instance(vec![T::zero()], v, None)
+        UnivariatePolynomial::new_instance(vec![T::zero()], v, None, true)
     }
 }
 
@@ -152,7 +154,7 @@ impl std::ops::Rem<ZZinstance> for UnivariatePolynomialInstance<ZZinstance> {
 }
 
 
-impl<T> std::ops::Div for UnivariatePolynomialInstance<T> where T: 'static + Instance + Clone + PartialEq + Operand + Number + ClassInstance {
+impl<T> std::ops::Div for UnivariatePolynomialInstance<T> where T: 'static + Instance + Clone + PartialEq + Operand + Number + ClassInstance + Display {
     type Output = (UnivariatePolynomialInstance<T>, UnivariatePolynomialInstance<T>);
     fn div(self, rhs: UnivariatePolynomialInstance<T>) -> (UnivariatePolynomialInstance<T>, UnivariatePolynomialInstance<T>) {
         UnivariatePolynomial::div(self, rhs)

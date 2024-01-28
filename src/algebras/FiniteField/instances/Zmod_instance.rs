@@ -110,7 +110,7 @@ impl std::ops::Sub<ZmodInstance> for ZmodInstance {
             if self.class == rhs.class {
                 self.class.clone().into_inner().sub(self, rhs)
             } else {
-                panic!("The values are not in the same field")
+                panic!("The values are not in the same field {} {}", self.class.into_inner().module.unwrap(), rhs.class.into_inner().module.unwrap());
             }
         }
     }

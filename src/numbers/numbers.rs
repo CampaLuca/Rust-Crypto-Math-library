@@ -9,6 +9,7 @@ use rand::Rng;
 use num_bigint::RandBigInt;
 use core::any::Any;
 use std::cell::RefCell;
+use std::fmt::Display;
 use crate::poly::classes::monomial::Monomial;
 
 use super::{instances::ZZ_instance::ZZinstance, classes::ZZ::ZZ};
@@ -423,12 +424,13 @@ pub fn generic_pow<T: Clone+Number+Operand+std::ops::Mul<T, Output = T>>(value: 
 }
 
 
-pub fn ring_poly_pow<T>(value: PolynomialRingInstance<T>, exponent: BigInt) -> PolynomialRingInstance<T> where T: 'static + ClassInstance + Instance + Number + Clone + PartialEq + Operand {
+pub fn ring_poly_pow<T>(value: PolynomialRingInstance<T>, exponent: BigInt) -> PolynomialRingInstance<T> where T: Display + 'static + ClassInstance + Instance + Number + Clone + PartialEq + Operand {
     let mut base = value.clone();
     let mut exp = exponent.clone();
+    let generator: Box<dyn StatefulClass> = value.coefficients[0].get_class();
 
     if exp == BigInt::from(0) {
-        return value.class.into_inner().one(value.var);
+        return value.class.into_inner().one(value.var, &generator);
     }
 
     while exp.clone() & BigInt::from(1) == BigInt::from(0) {
@@ -451,7 +453,7 @@ pub fn ring_poly_pow<T>(value: PolynomialRingInstance<T>, exponent: BigInt) -> P
     acc
 }
 
-pub fn poly_pow<T>(value: UnivariatePolynomialInstance<T>, exponent: BigInt) -> UnivariatePolynomialInstance<T> where T: Number + Instance + Clone + PartialEq + Operand {
+pub fn poly_pow<T>(value: UnivariatePolynomialInstance<T>, exponent: BigInt) -> UnivariatePolynomialInstance<T> where T: Display + Number + Instance + Clone + PartialEq + Operand {
     let mut base = value.clone();
     let mut exp = exponent.clone();
 

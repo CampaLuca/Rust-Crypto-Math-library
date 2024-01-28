@@ -60,6 +60,11 @@ pub mod algebras {
         pub mod instances {
             pub mod PolynomialRing_instance;
         }
+
+    }
+
+    pub mod Groups {
+        pub mod elliptic_curve_factory;
     }
 
 

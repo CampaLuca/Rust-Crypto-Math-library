@@ -29,7 +29,7 @@ pub fn gen_from_uniform_distribution<T>(lower_bound: BigInt, upper_bound: BigInt
         coefficients.push(T::random_with_bounds(lower_bound.clone(), upper_bound.clone()));
     }
     
-    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None)
+    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None, true)
 
 }
 
@@ -41,7 +41,7 @@ pub fn gen_from_uniform_distribution_with_modulo<T>(lower_bound: BigInt, upper_b
         coefficients.push(field.apply(T::random_with_bounds(lower_bound.clone(), upper_bound.clone())));
     }
     
-    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None)
+    UnivariatePolynomial::new_instance(coefficients, Var::new("x", BigInt::from(1)), None, true)
 
 }
 

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt::Display;
 
 use num_bigint::BigInt;
 use num_traits::Num;
@@ -61,28 +62,36 @@ impl UnivariatePolynomial {
     }
 
 
-    pub fn new_instance<T>(coefficients: Vec<T>, var: Var, multiplication_algorithm: Option<String>) -> UnivariatePolynomialInstance<T> where T: Instance + Clone + PartialEq + Operand + Number {
+    pub fn new_instance<T>(coefficients: Vec<T>, var: Var, multiplication_algorithm: Option<String>, clean_coefficients: bool) -> UnivariatePolynomialInstance<T> where T: Instance + Clone + PartialEq + Operand + Number {
         let class: UnivariatePolynomial = UnivariatePolynomial::new(multiplication_algorithm.clone());
         
-        if multiplication_algorithm.is_none() {
-            UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: clean::<T>(coefficients), var: var }
+        if clean_coefficients {
+            if multiplication_algorithm.is_none() {
+                UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: clean::<T>(coefficients), var: var, clean_coefficients: clean_coefficients}
+            } else {
+                UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: clean::<T>(coefficients), var: var, clean_coefficients: clean_coefficients }
+            }
         } else {
-            UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: clean::<T>(coefficients), var: var }
+            if multiplication_algorithm.is_none() {
+                UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: coefficients, var: var, clean_coefficients: clean_coefficients}
+            } else {
+                UnivariatePolynomialInstance { class: RefCell::new(class), coefficients: coefficients, var: var, clean_coefficients: clean_coefficients }
+            }
         }
     }
 
-    pub fn one<T>(var: Var) -> UnivariatePolynomialInstance<T> where T: Number + Instance + Clone + PartialEq + Operand{
+    pub fn one<T>(var: Var, generator: &Box<dyn StatefulClass>) -> UnivariatePolynomialInstance<T> where T: Number + Instance + Clone + PartialEq + Operand + 'static{
         // let variable = Var::new("x", BigInt::from(0));
         let mut coefficients: Vec<T> = Vec::new();
-        coefficients.push(T::one());
-        UnivariatePolynomial::new_instance(coefficients, var, None)
+        coefficients.push(generator.one().as_any().downcast_ref::<T>().unwrap().clone());
+        UnivariatePolynomial::new_instance(coefficients, var, None, true)
     }
 
-    pub fn zero<T>(var: Var) -> UnivariatePolynomialInstance<T> where T: Number + Instance + Clone + PartialEq + Operand {
+    pub fn zero<T>(var: Var, generator: &Box<dyn StatefulClass> ) -> UnivariatePolynomialInstance<T> where T: Number + Instance + Clone + PartialEq + Operand + 'static{
         // let variable = Var::new("x", BigInt::from(0));
         let mut coefficients: Vec<T> = Vec::new();
-        coefficients.push(T::zero());
-        UnivariatePolynomial::new_instance(coefficients, var, None)
+        coefficients.push(generator.zero().as_any().downcast_ref::<T>().unwrap().clone());
+        UnivariatePolynomial::new_instance(coefficients, var, None, true)
     }
     
 }
@@ -94,7 +103,7 @@ impl UnivariatePolynomial {
             coefficients[i] = coefficients[i].neg();
         }
 
-        UnivariatePolynomial::new_instance(coefficients, x.var.clone(), x.class.into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, x.var.clone(), x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
     }
 
     pub fn add<T>(x: UnivariatePolynomialInstance<T>, y: UnivariatePolynomialInstance<T>) -> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number{
@@ -121,7 +130,7 @@ impl UnivariatePolynomial {
                 }
             }
 
-            UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm)
+            UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
         } else {
             panic!("Cannot add these polynomials")
         }
@@ -150,7 +159,7 @@ impl UnivariatePolynomial {
                 }
             }
 
-            UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm)
+            UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
         } else {
             panic!("ERROR: Cannot sub these polynomials")
         }
@@ -172,7 +181,7 @@ impl UnivariatePolynomial {
                     }
                 }
                 
-                return UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm)
+                return UnivariatePolynomial::new_instance(coeff, x.var.clone(), x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
             // } else if x.multiplication_algorithm == "EvaluationMethod" {
             //     // need a random function
             //     // get degree of polynomials
@@ -189,11 +198,11 @@ impl UnivariatePolynomial {
 
     }
 
-    pub fn mul_by_scalar<T>(x: UnivariatePolynomialInstance<T>, y: T) -> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number {
+    pub fn mul_by_scalar<T>(x: UnivariatePolynomialInstance<T>, y: T) -> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number  {
         let coefficients = x.coefficients.into_iter().map(| x| {
-            x//x.mul(&y)
+            x.mul(&y)
         }).collect();
-        UnivariatePolynomial::new_instance(coefficients, x.var, x.class.into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, x.var, x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
     }
 
     pub fn rem<T>(x: UnivariatePolynomialInstance<T>, y: ZZinstance) -> UnivariatePolynomialInstance<ZmodInstance> where T: Instance + Operand + Clone + PartialEq + Number  {
@@ -201,10 +210,10 @@ impl UnivariatePolynomial {
         let coefficients = x.coefficients.into_iter().map(| x| {
             field.apply(x)
         }).collect();
-        UnivariatePolynomial::new_instance(coefficients, x.var, x.class.into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, x.var, x.class.into_inner().multiplication_algorithm, x.clean_coefficients)
     }
 
-    pub fn div<T>(x: UnivariatePolynomialInstance<T>, y: UnivariatePolynomialInstance<T>) -> (UnivariatePolynomialInstance<T>, UnivariatePolynomialInstance<T>) where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static{
+    pub fn div<T>(x: UnivariatePolynomialInstance<T>, y: UnivariatePolynomialInstance<T>) -> (UnivariatePolynomialInstance<T>, UnivariatePolynomialInstance<T>) where T: Display + Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static{
         let q_and_r: Vec<UnivariatePolynomialInstance<T>> = poly_divmod(&x.clone(), &y.clone());
         (q_and_r[0].clone(), q_and_r[1].clone())
     }

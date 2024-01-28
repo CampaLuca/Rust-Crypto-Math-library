@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use num_bigint::BigInt;
 use bigdecimal::BigDecimal;
 use bigdecimal::RoundingMode;
@@ -32,23 +34,24 @@ pub fn modular_inverse(a: BigInt, module: BigInt) -> BigInt {
 
 
 
-pub fn poly_divmod<T>(p: &UnivariatePolynomialInstance<T>, q: &UnivariatePolynomialInstance<T>) -> Vec<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance+ 'static {
+pub fn poly_divmod<T>(p: &UnivariatePolynomialInstance<T>, q: &UnivariatePolynomialInstance<T>) -> Vec<UnivariatePolynomialInstance<T>> where T: Display + Instance + Clone + PartialEq + Operand + Number + ClassInstance+ 'static {
     //getting general class
-    let generator = p.coefficients[0].get_class();
-    if (*q).clone() == UnivariatePolynomial::zero(q.var.clone()) {
+    let generator: Box<dyn StatefulClass> = p.coefficients[0].get_class();
+    if (*q).clone() == UnivariatePolynomial::zero(q.var.clone(), &generator) {
         panic!("Cannot divide by 0");
     } else {
-        let mut l: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(q.var.clone());
+        let mut l: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(q.var.clone(), &generator);
         let mut r: UnivariatePolynomialInstance<T> = (*p).clone();
         let var = q.var.clone();
-        while r != UnivariatePolynomial::zero(p.var.clone()) && q.clone().degree() <= r.clone().degree() {
+        while r != UnivariatePolynomial::zero(p.var.clone(), &generator) && q.clone().degree() <= r.clone().degree() {
+            
             let t = r.clone().leading_coefficient().div(&(q.leading_coefficient()));
             let mut coeff_m: Vec<T> = Vec::new();
             for _i in 0..(r.clone().degree()-q.clone().degree()) {
                 coeff_m.push(generator.zero().as_any().downcast_ref::<T>().unwrap().clone());
             }
             coeff_m.push(generator.one().as_any().downcast_ref::<T>().unwrap().clone());
-            let m: UnivariatePolynomialInstance<T> = UnivariatePolynomial::new_instance(coeff_m, var.clone(), None);
+            let m: UnivariatePolynomialInstance<T> = UnivariatePolynomial::new_instance(coeff_m, var.clone(), None, p.clean_coefficients);
             l = l+m.clone()*t.clone();
             r = r.clone()-((*q).clone()*m*t);
 
@@ -79,7 +82,7 @@ pub fn poly_divmod<T>(p: &UnivariatePolynomialInstance<T>, q: &UnivariatePolynom
 //             print(l,r)
 //         return(l,r)
 
-pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance + 'static {
+pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Vec<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance + 'static + Display{
     /*
     Extended Euclidean Algorithm (iterative)
     Return (d, x, y) where:
@@ -89,13 +92,15 @@ pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Ve
         - PostConditions: abs(x) <= abs(b//d) and abs(y) <= abs(a//d)
     */
     let var = a.var.clone();
-    let mut a_tuple= vec![a.clone(), a.class.clone().into_inner().one(var.clone()), a.class.clone().into_inner().zero(var.clone())];
-    let mut b_tuple = vec![b.clone(), a.class.clone().into_inner().zero(var.clone()), a.class.clone().into_inner().one(var.clone())];
+    let generator: Box<dyn StatefulClass> = a.coefficients[0].get_class();
+
+    let mut a_tuple= vec![a.clone(), a.class.clone().into_inner().one(var.clone(), &generator), a.class.clone().into_inner().zero(var.clone(), &generator)];
+    let mut b_tuple = vec![b.clone(), a.class.clone().into_inner().zero(var.clone(), &generator), a.class.clone().into_inner().one(var.clone(), &generator)];
     loop {
         let qr: Vec<UnivariatePolynomialInstance<T>> = poly_divmod(&(a_tuple[0].unwrap_from_ring()), &(b_tuple[0].unwrap_from_ring()));
-        let q = a.class.clone().into_inner().apply(&qr[0]);
-        let r = a.class.clone().into_inner().apply(&qr[1]);
-        if r == a.class.clone().into_inner().zero(var.clone()) {
+        let q = a.class.clone().into_inner().apply(&qr[0], a.ntt_form);
+        let r = a.class.clone().into_inner().apply(&qr[1], a.ntt_form);
+        if r == a.class.clone().into_inner().zero(var.clone(), &generator) {
             return b_tuple;
         }
         a_tuple = b_tuple.clone();
@@ -115,3 +120,16 @@ pub fn egcd<T>(a: PolynomialRingInstance<T>, b: PolynomialRingInstance<T>) -> Ve
 //         q, r = divmod(a[0], b[0])
 //         if not r: return b
 //         a, b = b, (r, a[1] - q*b[1], a[2] - q*b[2])
+
+
+// utilities
+pub fn clean_coefficients<T>(mut coeff: Vec<T>) -> Vec<T> where T: Instance + Operand + Clone + Number {
+    loop {
+        if coeff[coeff.len()-1].clone().is_zero() {
+            coeff.pop();
+        } else {
+            break;
+        }
+    }
+    coeff
+}

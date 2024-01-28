@@ -1,5 +1,6 @@
 use num_bigint::BigInt;
 use bigdecimal::BigDecimal;
+use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::numbers::StatefulClass;
@@ -27,6 +28,7 @@ impl Class<RRinstance> for RR {
             ClassTypes::ZZ => self.new_instance(BigDecimal::from((*value.as_any().downcast_ref::<ZZinstance>().unwrap()).value.clone())),
             ClassTypes::RR => self.new_instance((*value.as_any().downcast_ref::<RRinstance>().unwrap()).value.clone()),
             ClassTypes::BigDecimal => self.new_instance((*value.as_any().downcast_ref::<BigDecimal>().unwrap()).clone()),
+            ClassTypes::Zmod => self.apply((*value.as_any().downcast_ref::<ZmodInstance>().unwrap()).value.clone()),
             _ => self.new_instance(BigDecimal::from(0))
         }
     }
@@ -45,7 +47,8 @@ impl Class<RRinstance> for RR {
             coefficients.push(self.apply(polynomial.coefficients[i].clone()));
         }
 
-        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm)
+
+        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm, polynomial.clean_coefficients)
 
     }
 }

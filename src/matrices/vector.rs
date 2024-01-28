@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 
-use crate::{algebras::Rings::{classes::PolynomialRing::PolynomialRing, instances::PolynomialRing_instance::PolynomialRingInstance}, numbers::numbers::{Instance, Operand, Number}, poly::{classes::univariate_polynomial::UnivariatePolynomial, instances::univariate_polynomial_instance::UnivariatePolynomialInstance}, variables::vars::Var};
+use crate::{algebras::Rings::{classes::PolynomialRing::PolynomialRing, instances::PolynomialRing_instance::PolynomialRingInstance}, numbers::numbers::{ClassInstance, Instance, Number, Operand, StatefulClass}, poly::{classes::univariate_polynomial::UnivariatePolynomial, instances::univariate_polynomial_instance::UnivariatePolynomialInstance}, variables::vars::Var};
 
 use super::matrix::Matrix;
 
@@ -74,7 +74,7 @@ impl<T> Vector<T> where T: Instance + Clone + PartialEq + Operand {
 /*
     Vector operations for Univariate Polynomials
 */
-impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + Eq {
+impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + Eq + ClassInstance + 'static {
    
 
     pub fn transpose(&self) -> Matrix<UnivariatePolynomialInstance<T>> {
@@ -92,7 +92,8 @@ impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
     }
 
     pub fn l_1_norm(&self) -> UnivariatePolynomialInstance<T> {
-        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)));
+        let generator: Box<dyn StatefulClass> = self.values[0].coefficients[0].get_class();
+        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)), &generator);
         for i in 0..self.values.len() {
             sum = sum.add(&self.values[i]);
         }
@@ -101,7 +102,9 @@ impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
     }
 
     pub fn l_2_norm(&self) -> UnivariatePolynomialInstance<T> {
-        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)));
+        let generator: Box<dyn StatefulClass> = self.values[0].coefficients[0].get_class();
+
+        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)), &generator);
         for i in 0..self.values.len() {
             sum = sum.add(&(self.values[i].clone().mul(&self.values[i])));
         }
@@ -110,7 +113,9 @@ impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
     }
 
     pub fn l_inf_norm(&self) -> UnivariatePolynomialInstance<T> {
-        let mut max: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)));
+        let generator: Box<dyn StatefulClass> = self.values[0].coefficients[0].get_class();
+
+        let mut max: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)), &generator);
         for i in 0..self.values.len() {
             if self.values[i].greater_than(&max) {
                 max = self.values[i].clone();
@@ -124,7 +129,9 @@ impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
         if self.len != m.len {
             panic!("Cannot perform element-wise product with different size vectors");
         }
-        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)));
+        let generator: Box<dyn StatefulClass> = self.values[0].coefficients[0].get_class();
+
+        let mut sum: UnivariatePolynomialInstance<T> = UnivariatePolynomial::zero(Var::new("x", BigInt::from(1)), &generator);
         for i in 0..self.len {
             sum = sum.add(&(self.values[i].mul(&m.values[i])));
         }
@@ -138,7 +145,7 @@ impl<T> Vector<UnivariatePolynomialInstance<T>> where T: Instance + Clone + Part
 /*
     Vector operations for Polynomial Rings
 */
-impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + Eq {
+impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + Eq + ClassInstance + 'static{
    
 
     pub fn transpose(&self) -> Matrix<PolynomialRingInstance<T>> {
@@ -158,7 +165,9 @@ impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
     pub fn l_1_norm(&self) -> PolynomialRingInstance<T> {
         let variable: Var = self.values[0].clone().var.clone();
         let generator: PolynomialRing<T> = self.values[0].clone().class.into_inner().clone();
-        let mut sum: PolynomialRingInstance<T> = generator.zero(variable);
+        let generator_values: Box<dyn StatefulClass> = self.values[0].clone().coefficients[0].get_class();
+
+        let mut sum: PolynomialRingInstance<T> = generator.zero(variable, &generator_values);
         for i in 0..self.values.len() {
             sum = sum.add(&self.values[i]);
         }
@@ -169,7 +178,9 @@ impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
     pub fn l_2_norm(&self) -> PolynomialRingInstance<T> {
         let variable: Var = self.values[0].var.clone();
         let generator: PolynomialRing<T> = self.values[0].clone().class.into_inner().clone();
-        let mut sum: PolynomialRingInstance<T> = generator.zero(variable);
+        let generator_values: Box<dyn StatefulClass> = self.values[0].clone().coefficients[0].get_class();
+
+        let mut sum: PolynomialRingInstance<T> = generator.zero(variable, &generator_values);
         for i in 0..self.values.len() {
             sum = sum.add(&(self.values[i].clone().mul(&self.values[i])));
         }
@@ -180,7 +191,9 @@ impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
     pub fn l_inf_norm(&self) -> PolynomialRingInstance<T> {
         let variable: Var = self.values[0].var.clone();
         let generator: PolynomialRing<T> = self.values[0].clone().class.into_inner().clone();
-        let mut max: PolynomialRingInstance<T> = generator.zero(variable);
+        let generator_values: Box<dyn StatefulClass> = self.values[0].clone().coefficients[0].get_class();
+
+        let mut max: PolynomialRingInstance<T> = generator.zero(variable, &generator_values);
         for i in 0..self.values.len() {
             if self.values[i].greater_than(&max) {
                 max = self.values[i].clone();
@@ -197,8 +210,9 @@ impl<T> Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq 
 
         let variable: Var = self.values[0].var.clone();
         let generator: PolynomialRing<T> = self.values[0].clone().class.into_inner().clone();
+        let generator_values: Box<dyn StatefulClass> = self.values[0].clone().coefficients[0].get_class();
 
-        let mut sum: PolynomialRingInstance<T> = generator.zero(variable);
+        let mut sum: PolynomialRingInstance<T> = generator.zero(variable, &generator_values);
         for i in 0..self.len {
             sum = sum.add(&(self.values[i].mul(&m.values[i])));
         }

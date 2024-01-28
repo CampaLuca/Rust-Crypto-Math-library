@@ -37,6 +37,7 @@ impl Class<ZmodInstance> for Zmod {
             ClassTypes::ZZ => self.new_instance(ZZ::new().new_instance((*value.as_any().downcast_ref::<ZZinstance>().unwrap()).value.clone())),
             ClassTypes::RR => self.new_instance(ZZ::new().new_instance(utils::round_to_bigint((*value.as_any().downcast_ref::<RRinstance>().unwrap()).value.clone()))),
             ClassTypes::BigDecimal => self.new_instance(ZZ::new().new_instance(utils::round_to_bigint((*value.as_any().downcast_ref::<BigDecimal>().unwrap()).clone()))),
+            ClassTypes::Zmod => self.apply((*value.as_any().downcast_ref::<ZmodInstance>().unwrap()).value.clone()),
             _ => self.new_instance(ZZ::new().new_instance(BigInt::from(0)))
         }
     }
@@ -57,7 +58,7 @@ impl Class<ZmodInstance> for Zmod {
             coefficients.push(self.apply(polynomial.coefficients[i].clone()));
         }
 
-        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm)
+        UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm, polynomial.clean_coefficients)
 
     }
 

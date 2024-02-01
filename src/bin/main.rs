@@ -256,7 +256,7 @@ fn test_rsa() {
     let rsa: RSA = RSA::init(1024);
 
 
-    let plain = vec![1,2,3,4,5,6,7];
+    let plain = random_byte_array(12);
     let ciphertext = rsa.encrypt(plain.clone());
 
     let plaintext = rsa.decrypt(ciphertext.clone());

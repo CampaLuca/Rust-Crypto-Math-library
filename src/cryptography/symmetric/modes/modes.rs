@@ -3,5 +3,6 @@ pub enum Modes {
     CTR,
     CBC,
     OFB,
-    GCM
+    GCM,
+    NONE
 }

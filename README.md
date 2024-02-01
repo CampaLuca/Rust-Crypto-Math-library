@@ -8,7 +8,7 @@ The aim is to put withing a single library all the currectly used schemes and so
 
 ## Cryptography
 Symmetric ciphers:
-- AES 128 
+- [AES 128 ](#aes)
 
 Modes of operation for AES:
 - CTR_with_preprocessing, ECB, CBC
@@ -20,18 +20,18 @@ Padding Types:
 - ISO_IEC_7816_4
 
 Asymmetric ciphers:
-- RSA
-- Kyber512, Kyber768, Kyber1024
+- [RSA](#rsa)
+- [Kyber512, Kyber768, Kyber1024](#kyber)
 
 Homomorphic Encryption:
-- BFV (Brakerski/Fan-Vercauteren)
+- [BFV (Brakerski/Fan-Vercauteren)](#bfv)
 
 
 ## Mathematics
 Numeric types:
-- ZZ (Integers)
-- QQ (Rational)
-- RR (Real)
+- [ZZ (Integers)](#integers)
+- [QQ (Rational)](#rational-numbers)
+- [RR (Real)](#real-numbers)
 
 Groups:
 - Finite fields (Zmod)

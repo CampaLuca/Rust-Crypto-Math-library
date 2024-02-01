@@ -29,7 +29,7 @@ impl<T> std::ops::Add for Vector<T> where T: Instance + Clone + PartialEq + Oper
     
 }
 
-impl<T> std::ops::Add<Vector<PolynomialRingInstance<T>>> for Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number {
+impl<T> std::ops::Add<Vector<PolynomialRingInstance<T>>> for Vector<PolynomialRingInstance<T>> where T: Instance + Clone + PartialEq + Operand + Number + ClassInstance + 'static {
     type Output = Vector<PolynomialRingInstance<T>>;
     fn add(self, rhs: Self) -> Self::Output {
         if self.len == rhs.len {

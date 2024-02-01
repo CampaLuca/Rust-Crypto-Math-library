@@ -1,3 +1,4 @@
+#![recursion_limit = "2048"]
 pub mod poly {
     pub mod classes {
         pub mod polynomial;
@@ -64,7 +65,15 @@ pub mod algebras {
     }
 
     pub mod Groups {
-        pub mod elliptic_curve_factory;
+        pub mod EllipticCurves {
+            pub mod elliptic_curve_factory;
+            pub mod elliptic_curve_finite_field;
+            pub mod elliptic_curve_number_field;
+            pub mod elliptic_curve_generic;
+            pub mod elliptic_curve_rational_field;
+            pub mod elliptic_curve_point;
+            pub mod elliptic_curve_polynomial_ring;
+        }
     }
 
 
@@ -92,6 +101,17 @@ pub mod cryptography {
     pub mod asymmetric {
         pub mod interfaces { pub mod interfaces; }
         pub mod primitives { pub mod rsa; pub mod kyber;}
+    }
+
+
+    pub mod homomorphic {
+        pub mod interfaces {
+            pub mod interfaces;
+        }
+
+        pub mod primitives {
+            pub mod bfv;
+        }
     }
 
     pub mod symmetric {

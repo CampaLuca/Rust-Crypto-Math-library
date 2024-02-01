@@ -702,7 +702,6 @@ impl NTTFactory {
         let powers = NTT::gen_powers(N, q.clone(), zeta.clone(), 2);
         let (zetas, zetas_inv) = NTT::gen_twiddles(N, q.clone(), zeta.clone(), powers.clone());
 
-        println!("{:?}", zetas.clone());
 
         let field = Zmod::new(Some(ZZ::new().new_instance(q.clone())));
         let post_proc = field.apply(2*zetas[1].clone()-1).inverse().value.value;

@@ -105,6 +105,7 @@ pub trait Class<V> {
     fn apply<T: Instance>(&self, value: T) -> V;
     fn apply_to_monomial<T: Instance + Number>(&self, monomial: MonomialInstance<T>) -> MonomialInstance<V>;
     fn apply_to_univariate_poly<T: Instance + Number + Operand + PartialEq + Clone>(&self, polynomial: UnivariatePolynomialInstance<T>) -> UnivariatePolynomialInstance<V>;
+    fn apply_to_poly_ring<T: Instance + Number + Operand + PartialEq + Clone+ClassInstance+'static>(&self, polynomial: PolynomialRingInstance<T>) -> PolynomialRingInstance<V>;
 }
 
 

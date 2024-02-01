@@ -76,7 +76,7 @@ pub fn mix_columns(current_state: &mut Vec<u8>) {
         panic!("Block length should be 16");
     }
 
-    let mut temp: Vec<u8> = vec![0, 16];
+    let mut temp: Vec<u8> = vec![0;16];
 
     for i in 0..4 {
         temp[i*4+0] = MUL_2[current_state[(4*i)+0] as usize ] ^ MUL_3[current_state[(4*i)+1] as usize ] ^ current_state[(4*i)+2] ^ current_state[(4*i)+3];
@@ -96,7 +96,7 @@ pub fn inverse_mix_columns(current_state: &mut Vec<u8>) {
         panic!("Block length should be 16");
     }
 
-    let mut temp: Vec<u8> = vec![0,16];
+    let mut temp: Vec<u8> = vec![0;16];
     for i in 0..4 {
         temp[i*4+0] = MUL_14[current_state[(4*i)+0] as usize ] ^ MUL_11[current_state[(4*i)+1] as usize ] ^ MUL_13[current_state[(4*i)+2] as usize ] ^ MUL_9[current_state[(4*i)+3] as usize ];
         temp[i*4+1] = MUL_9[current_state[(4*i)+0] as usize ] ^ MUL_14[current_state[(4*i)+1] as usize ] ^ MUL_11[current_state[(4*i)+2] as usize ] ^ MUL_13[current_state[(4*i)+3] as usize ];
@@ -132,8 +132,9 @@ pub fn inverse_sub_bytes(current_state: &mut Vec<u8>) {
 INDEX is the index of the current key
 */
 pub fn next_key_from_expansion(current_key: &mut Vec<u8>, index: usize) {
-    let mut key: Vec<u8> = vec![0,16];
+    let mut key: Vec<u8> = vec![0;16];
 
+    
     key[0] = RCON[index+1] ^ SBOX[current_key[13] as usize] ^ current_key[0];
     key[1] = SBOX[current_key[14] as usize] ^ current_key[1];
     key[2] = SBOX[current_key[15] as usize] ^ current_key[2];
@@ -146,19 +147,23 @@ pub fn next_key_from_expansion(current_key: &mut Vec<u8>, index: usize) {
     for i in 0..16 {
         current_key[i] = key[i];
     }
+
+
+    
 }
 
 pub fn prec_key_from_expansion(current_key: &mut Vec<u8>, index: usize) {
-    let mut key: Vec<u8> = vec![0,16];
+    let mut key: Vec<u8> = vec![0;16];
+
 
     for i in (4..16).rev() {
         key[i] = current_key[i] ^ current_key[i-4];
     }
 
-    key[3] = SBOX[current_key[12] as usize] ^ current_key[3];
-    key[2] = SBOX[current_key[15] as usize] ^ current_key[2];
-    key[1] = SBOX[current_key[14] as usize] ^ current_key[1];
-    key[0] = SBOX[current_key[13] as usize] ^ current_key[0] ^ RCON[index];
+    key[3] = SBOX[key[12] as usize] ^ current_key[3];
+    key[2] = SBOX[key[15] as usize] ^ current_key[2];
+    key[1] = SBOX[key[14] as usize] ^ current_key[1];
+    key[0] = SBOX[key[13] as usize] ^ current_key[0] ^ RCON[index+1];
     
     for i in 0..16 {
         current_key[i] = key[i];

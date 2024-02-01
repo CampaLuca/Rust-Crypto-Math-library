@@ -62,8 +62,8 @@ impl<T> Eq for UnivariatePolynomialInstance<T> where T: Instance + PartialEq {}
 
 
 impl<T> UnivariatePolynomialInstance<T> where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static + Display{
-    pub fn quotient(self, irreducible_poly: UnivariatePolynomialInstance<T>, ntt_form: bool) -> PolynomialRingInstance<T> {
-        let class: PolynomialRing<T> = PolynomialRing::new(irreducible_poly);
+    pub fn quotient(self, irreducible_poly: UnivariatePolynomialInstance<T>, ntt_form: bool, fixed_length_coefficients: bool) -> PolynomialRingInstance<T> {
+        let class: PolynomialRing<T> = PolynomialRing::new(irreducible_poly, fixed_length_coefficients);
         class.apply(&self,  ntt_form) //(self.var, self.coefficients)
     }
 }

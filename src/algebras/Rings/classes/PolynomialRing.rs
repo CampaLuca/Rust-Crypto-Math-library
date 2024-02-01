@@ -1,6 +1,8 @@
 //use sagemath::numbers::sets::General_Class;
 
+use num_bigint::BigInt;
 use num_traits::Num;
+use num_traits::ToPrimitive;
 
 use crate::algebras::FiniteField::classes::Zmod::Zmod;
 use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
@@ -27,7 +29,8 @@ use crate::variables::vars::Var;
 pub struct PolynomialRing<T> {
     pub irreducible_polynomial: UnivariatePolynomialInstance<T>,
     pub ntt_enabled: bool,
-    pub ntt_ctxt: Option<RefCell<NTT>>
+    pub ntt_ctxt: Option<RefCell<NTT>>,
+    pub fixed_length_coefficients: bool
 }
 
 
@@ -57,7 +60,7 @@ impl<T> PolynomialRing<T> where T: Instance + Clone + PartialEq + Operand + Numb
             self.new_instance(x.var.clone(), x.coefficients.clone(), ntt_form)
         } else {
             let qr: Vec<UnivariatePolynomialInstance<T>> = utils::poly_divmod(x, &(self.irreducible_polynomial));
-
+        
             self.new_instance(qr[1].var.clone(), qr[1].coefficients.clone(), ntt_form)
         }
     }
@@ -77,17 +80,71 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
     }
 
     pub fn zero(self, v: Var, generator: &Box<dyn StatefulClass>) -> PolynomialRingInstance<T> {
-        if self.ntt_enabled {
+        if self.ntt_enabled || self.fixed_length_coefficients {
             return self.new_instance(v, vec![generator.zero().as_any().downcast_ref::<T>().unwrap().clone(); self.irreducible_polynomial.degree()], self.ntt_enabled);
         }
-        self.new_instance(v, vec![T::zero()], self.ntt_enabled)
+        self.new_instance(v, vec![generator.zero().as_any().downcast_ref::<T>().unwrap().clone()], self.ntt_enabled)
     }
 }
 
+impl PolynomialRing<ZmodInstance> {
+       
+    pub fn rem(&self, x: PolynomialRingInstance<ZmodInstance>, y: ZZinstance) -> PolynomialRingInstance<ZmodInstance>  {
+        let field: Zmod = Zmod::new(Some(y));
+        let coefficients: Vec<ZmodInstance> = x.coefficients.into_iter().map(| x| {
+            field.apply(x)
+        }).collect();
+        
+        self.new_instance(x.var, coefficients, x.ntt_form)
+    }
+    
+}
 
-impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number  {
-    pub fn new(irreducible_polynomial: UnivariatePolynomialInstance<T>) -> PolynomialRing<T> {
-        PolynomialRing { irreducible_polynomial: irreducible_polynomial, ntt_enabled: false, ntt_ctxt: None } 
+impl PolynomialRing<ZZinstance> {
+       
+    pub fn rem(&self, x: PolynomialRingInstance<ZZinstance>, y: ZZinstance) -> PolynomialRingInstance<ZmodInstance>  {
+        let field: Zmod = Zmod::new(Some(y));
+        let coefficients: Vec<ZmodInstance> = x.coefficients.into_iter().map(| x| {
+            field.apply(x)
+        }).collect();
+        
+        let ring = PolynomialRing::new(field.apply_to_univariate_poly(x.class.clone().into_inner().irreducible_polynomial.clone()), x.class.clone().into_inner().fixed_length_coefficients);
+
+        return ring.new_instance(x.var.clone(), coefficients, false);
+    }
+    
+}
+
+impl PolynomialRing<ZZinstance> {
+    pub fn base_decompose(&self, poly: PolynomialRingInstance<ZZinstance>, base: f64, module: BigInt) -> Vec<PolynomialRingInstance<ZZinstance>> {
+        let l = module.to_f64().unwrap().log(base).trunc().to_i64().unwrap();
+        let mut container: Vec<PolynomialRingInstance<ZZinstance>> = Vec::new();
+        let zz = ZZ::new();
+        let int_base = zz.apply(BigInt::from(base.to_u64().unwrap()));
+
+        let mut poly_coefficients = poly.coefficients.clone();
+
+
+        for i in 0..(l+1) {
+            let mut coefficients: Vec<ZZinstance> = Vec::new();
+            for j in 0..poly_coefficients.len() {
+                let quotient = poly_coefficients[j].clone() / int_base.clone();
+                let remainder = poly_coefficients[j].clone() - quotient.clone()*int_base.clone();
+                poly_coefficients[j] = quotient;
+                coefficients.push(remainder);
+            }
+
+
+            container.push(self.new_instance(poly.var.clone(), coefficients, poly.ntt_form));
+        }
+
+        container
+    }
+}
+
+impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Number + ClassInstance + 'static {
+    pub fn new(irreducible_polynomial: UnivariatePolynomialInstance<T>, fixed_length_coefficients: bool) -> PolynomialRing<T> {
+        PolynomialRing { irreducible_polynomial: irreducible_polynomial, ntt_enabled: false, ntt_ctxt: None, fixed_length_coefficients: fixed_length_coefficients } 
     }
 
     pub fn get_ntt_enabled_ring(&self, ntt_ctxt: RefCell<NTT>) -> PolynomialRing<ZmodInstance> {
@@ -97,7 +154,7 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
             irreducible_polynomial_coefficients.push(field.apply(el));
         }
 
-        let mut ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(UnivariatePolynomial::new_instance(irreducible_polynomial_coefficients, self.irreducible_polynomial.var.clone(), None, false));
+        let mut ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(UnivariatePolynomial::new_instance(irreducible_polynomial_coefficients, self.irreducible_polynomial.var.clone(), None, false), true);
         ring.ntt_ctxt = Some(ntt_ctxt);
         ring.ntt_enabled = true;
 
@@ -106,11 +163,18 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
     }
 
 
+   
+
     pub fn new_instance(&self, var: Var, coefficients: Vec<T>, ntt_form: bool) -> PolynomialRingInstance<T> {
-        if !ntt_form {
+        if !self.fixed_length_coefficients {
             return PolynomialRingInstance { class: RefCell::new(self.clone()), var: var, coefficients: clean_coefficients(coefficients), ntt_form: ntt_form } 
         } 
 
+        let mut new_coefficients = coefficients.clone();
+        let generator = coefficients[0].clone().get_class();
+        for _i in coefficients.len()..self.irreducible_polynomial.degree() {
+            new_coefficients.push(generator.zero().as_any().downcast_ref::<T>().unwrap().clone());
+        }
         return PolynomialRingInstance { class: RefCell::new(self.clone()), var: var, coefficients: coefficients, ntt_form: ntt_form } 
 
     }
@@ -167,9 +231,7 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
         self.new_instance(x.var, coeff, x.ntt_form && y.ntt_form) 
     }
 
-    
-
-    
+ 
 
     pub fn neg(&self, x: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         let coefficients = x.coefficients.into_iter().map(| x| {
@@ -184,11 +246,13 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
 
 
 impl PolynomialRing<ZmodInstance> {
-    pub fn apply_ntt_ctxt<T>(&self, instance: &PolynomialRingInstance<T>) -> PolynomialRingInstance<ZmodInstance> where T: Instance + Operand + Clone + PartialEq  + Number {
+    pub fn apply_ntt_ctxt<T>(&self, instance: &PolynomialRingInstance<T>) -> PolynomialRingInstance<ZmodInstance> where T: Instance + Operand + Clone + PartialEq  + Number + ClassInstance + 'static{
         if self.ntt_enabled {
             let mut coefficients = instance.coefficients.clone();
+            let generator = coefficients[0].clone().get_class();
+
             for _i in coefficients.len()..instance.class.clone().into_inner().irreducible_polynomial.degree() {
-                coefficients.push(T::zero());
+                coefficients.push(generator.zero().as_any().downcast_ref::<T>().unwrap().clone());
             }
             let new_coefficients = self.ntt_ctxt.clone().unwrap().into_inner().to_ntt(coefficients);
             return PolynomialRing::<ZmodInstance>::new_ntt_instance(self, instance.var.clone(), new_coefficients);
@@ -213,7 +277,7 @@ impl PolynomialRing<ZmodInstance> {
     }
 
 
-    pub fn from_ntt_ctxt(&self, instance: &PolynomialRingInstance<ZmodInstance>) -> PolynomialRingInstance<ZZinstance>{
+    pub fn from_ntt_ctxt(&self, instance: &PolynomialRingInstance<ZmodInstance>, fixed_length_coefficients: bool) -> PolynomialRingInstance<ZZinstance>{
         
         if instance.class.clone().into_inner().ntt_enabled && instance.ntt_form {
             let mut irreducible_polynomial: Vec<ZZinstance> = Vec::new();
@@ -228,9 +292,10 @@ impl PolynomialRing<ZmodInstance> {
                 coefficients.push(el.value);
             }
 
-            coefficients = clean_coefficients(coefficients);
+            
+            //coefficients = clean_coefficients(coefficients);
 
-            let class: PolynomialRing<ZZinstance>  = PolynomialRing::new( UnivariatePolynomial::new_instance(irreducible_polynomial, instance.var.clone(), None, false));
+            let class: PolynomialRing<ZZinstance>  = PolynomialRing::new( UnivariatePolynomial::new_instance(irreducible_polynomial, instance.var.clone(), None, false), fixed_length_coefficients);
             return class.new_instance(instance.var.clone(), coefficients, false);
         } else {
             panic!("ERROR: Polynomial is not in NTT format");
@@ -268,7 +333,6 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
 
         if x.ntt_form && y.ntt_form && self.ntt_enabled && x.class.into_inner().irreducible_polynomial == y.class.into_inner().irreducible_polynomial {
             let mut coeff: Vec<T> = Vec::new();
-
             if self.irreducible_polynomial.degree() % 4 == 0 && self.irreducible_polynomial.coefficients[0].clone() == self.irreducible_polynomial.coefficients[0].clone().get_class().one().as_any().downcast_ref::<T>().unwrap().clone() {
                 let q = self.ntt_ctxt.clone().unwrap().into_inner().q;
                 let zetas = self.ntt_ctxt.clone().unwrap().into_inner().zetas;
@@ -291,24 +355,45 @@ impl<T> PolynomialRing<T> where T: Instance + Operand + Clone + PartialEq + Numb
             }
             self.new_instance(x.var, coeff, true)
         } else {
-            
-            // schoolbook multiplication, then reducing by irreducible poly thanks to divmod
-            let len = x.coefficients.len() + y.coefficients.len() -1;
-            let mut coeff: Vec<T> = vec![T::zero(); len];
-            
-            // schoolbook multiplication
-            for i in 0..x.coefficients.len() {
-                // perform self[i] * rhs
-                for j in 0..y.coefficients.len() {
-                    coeff[i+j] = coeff[i+j].clone().add(&(x.coefficients[i].clone().mul(&(y.coefficients[j]))));
+           // if self.irreducible_polynomial.coefficients[0].clone() == self.irreducible_polynomial.coefficients[0].clone().get_class().one().as_any().downcast_ref::<T>().unwrap().clone().neg() && x.coefficients.len() == y.coefficients.len() {
+                let len = x.coefficients.len() + y.coefficients.len();
+                let zero = x.coefficients[0].clone().get_class().zero().as_any().downcast_ref::<T>().unwrap().clone();
+                let mut C: Vec<T> = vec![zero.clone(); len];
+                let mut D: Vec<T> = vec![zero.clone(); x.coefficients.len()];
+
+                for i in 0..x.coefficients.len() {
+                    for j in 0..y.coefficients.len() {
+                        C[i+j] = C[i+j].clone().add(&(x.coefficients[i].clone().mul(&(y.coefficients[j].clone()))));
+                    }
                 }
-            }
 
-            
-            println!("Schoolbook");
+                for i in 0..x.coefficients.len() {
+                    D[i] = C[i].sub(&C[i+x.coefficients.len()].clone());
+                }
+                
+                let current_poly = UnivariatePolynomial::new_instance(D, x.var.clone(), None, true);
+                self.apply(&current_poly, false)
 
-            let current_poly = UnivariatePolynomial::new_instance(coeff, x.var.clone(), None, true);
-            self.apply(&current_poly, false)
+
+            // } else {
+            //     // schoolbook multiplication, then reducing by irreducible poly thanks to divmod
+            //     let len = x.coefficients.len() + y.coefficients.len() -1;
+            //     let mut coeff: Vec<T> = vec![T::zero(); len];
+                
+            //     // schoolbook multiplication
+            //     for i in 0..x.coefficients.len() {
+            //         // perform self[i] * rhs
+            //         for j in 0..y.coefficients.len() {
+            //             coeff[i+j] = coeff[i+j].clone().add(&(x.coefficients[i].clone().mul(&(y.coefficients[j]))));
+            //         }
+            //     }
+
+                
+            //     println!("Schoolbook");
+
+            //     let current_poly = UnivariatePolynomial::new_instance(coeff, x.var.clone(), None, true);
+            //     self.apply(&current_poly, false)
+            // }
         }
     }
 }

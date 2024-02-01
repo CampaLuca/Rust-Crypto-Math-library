@@ -1,7 +1,8 @@
+use num_traits::ToBytes;
 use rand::Rng;
 use rayon::prelude::*;
 
-use crate::cryptography::{symmetric::{modes::modes::Modes, interfaces::interfaces::{AESinterface, AESfactory}, AES::{aes_functions, cipher::{encrypt, decrypt, self}}}, padding::padding::Paddings};
+use crate::cryptography::{symmetric::{modes::modes::Modes, interfaces::interfaces::{AESinterface, AESfactory}, AES::{aes_functions, cipher::{encrypt, decrypt, self}}}, padding::padding::{GenericPadding, Pad, Paddings}};
 
 
 
@@ -30,11 +31,11 @@ pub struct aes_factory {
 impl AESfactory for aes_factory {
     fn init(mode: Modes, padding: Paddings) -> Box<dyn AESinterface> {
         let result: Box<dyn AESinterface> = match mode { 
-            Modes::CBC=>AES_CBC::init(),
+            Modes::CBC=>AES_CBC::init(padding),
             Modes::CTR=>AES_CTR_with_preprocessing::init(),
             // Modes::OFB=>AES_OFB::init(),
             // Modes::GCM=>AES_GCM::init(),
-            Modes::ECB=>AES_ECB::init(),
+            Modes::ECB=>AES_ECB::init(padding),
             _=>AES::init()           
           };
 
@@ -93,7 +94,9 @@ impl AES {
 pub struct AES_CTR_with_preprocessing {
     keys: Vec<Vec<u8>>, 
     primary_key: usize,
-    current_byte_stream: Vec<Vec<u8>>
+    current_byte_stream: Vec<Vec<u8>>, 
+    current_iv: Vec<u8>, // unique for each encryption
+    nonce: Vec<u8>// unique for each security association (chosen at init at random)
 }
 
 impl AESinterface for AES_CTR_with_preprocessing {
@@ -106,6 +109,7 @@ impl AESinterface for AES_CTR_with_preprocessing {
             blocks = (plaintext.len() / 16)+1;
         }
 
+ 
         let mut blocks_plaintext: Vec<Vec<u8>> = Vec::new();
         for i in 0..blocks {
             let mut temp_vector: Vec<u8> = Vec::new();
@@ -118,33 +122,46 @@ impl AESinterface for AES_CTR_with_preprocessing {
             blocks_plaintext.push(temp_vector);
         }
 
+        
         blocks_plaintext.par_iter_mut().enumerate().for_each(|(i, x)| byte_array_xor(x, &self.current_byte_stream[i]));
+        blocks_plaintext.insert(0, self.current_iv.clone());
         self.refresh_byte_stream();
         blocks_plaintext.concat()
 
     }
 
     fn decrypt(&mut self, ciphertext: Vec<u8>) -> Vec<u8> {
+        let iv: Vec<u8> = ciphertext[0..8].to_vec();
+        let ciphertext_container: Vec<u8> = ciphertext[8..].to_vec();
         let mut blocks = 0;
-        if ciphertext.len() % 16 == 0 {
-            blocks = ciphertext.len() / 16;
+        if ciphertext_container.len() % 16 == 0 {
+            blocks = ciphertext_container.len() / 16;
         } else {
-            blocks = (ciphertext.len() / 16)+1;
+            blocks = (ciphertext_container.len() / 16)+1;
         }
 
         let mut blocks_ciphertext: Vec<Vec<u8>> = Vec::new();
+
+        
+
         for i in 0..blocks {
             let mut temp_vector: Vec<u8> = Vec::new();
             for j in 0..16 {
-                if i*16+j >= ciphertext.len() {
+                if i*16+j >= ciphertext_container.len() {
                     break;
                 }
-                temp_vector.push(ciphertext[i*16+j]);
+                temp_vector.push(ciphertext_container[i*16+j]);
             }
+
+            
             blocks_ciphertext.push(temp_vector);
+            
         }
 
-        blocks_ciphertext.par_iter_mut().enumerate().for_each(|(i, x)| byte_array_xor(x, &self.current_byte_stream[i]));
+        
+        let byte_stream = AES_CTR_with_preprocessing::get_byte_stream(self.keys[self.primary_key].clone(), iv.clone(), self.nonce.clone());
+
+        blocks_ciphertext.par_iter_mut().enumerate().for_each(|(i, x)| byte_array_xor(x, &byte_stream[i]));
         blocks_ciphertext.concat()
     }
 }
@@ -155,9 +172,10 @@ impl AES_CTR_with_preprocessing {
         let mut keys: Vec<Vec<u8>> = Vec::new();
         keys.push(key.clone());
 
-        let iv: Vec<u8> = random_byte_array(15);
-        let byte_stream: Vec<Vec<u8>> = AES_CTR_with_preprocessing::get_byte_stream(key, iv);
-        Box::new(AES_CTR_with_preprocessing { keys: keys, primary_key: 0, current_byte_stream: byte_stream})
+        let iv: Vec<u8> = random_byte_array(8);
+        let nonce: Vec<u8> = random_byte_array(4);
+        let byte_stream: Vec<Vec<u8>> = AES_CTR_with_preprocessing::get_byte_stream(key, iv.clone(), nonce.clone());
+        Box::new(AES_CTR_with_preprocessing { keys: keys, primary_key: 0, current_byte_stream: byte_stream, current_iv: iv, nonce: nonce})
     }
 
     pub fn refresh_key(&mut self) {
@@ -167,19 +185,22 @@ impl AES_CTR_with_preprocessing {
     }
 
     fn refresh_byte_stream(&mut self) {
-        let iv: Vec<u8> = random_byte_array(15);
-        let byte_stream: Vec<Vec<u8>> = AES_CTR_with_preprocessing::get_byte_stream(self.keys[self.primary_key].clone(), iv);
+        let iv: Vec<u8> = random_byte_array(8);
+        let byte_stream: Vec<Vec<u8>> = AES_CTR_with_preprocessing::get_byte_stream(self.keys[self.primary_key].clone(), iv.clone(), self.nonce.clone());
         self.current_byte_stream = byte_stream;
+        self.current_iv = iv.clone();
     }
 
     // the computation of the byte_stream is parallelized
-    fn get_byte_stream(key: Vec<u8>, nonce_iv: Vec<u8>) -> Vec<Vec<u8>> {
+    pub fn get_byte_stream(key: Vec<u8>, iv: Vec<u8>, nonce: Vec<u8>) -> Vec<Vec<u8>> {
         let mut byte_stream_container: Vec<Vec<u8>> = Vec::new();
-        let counter: u8 = rand::thread_rng().gen::<u8>();
+        let mut counter: u32 = 0;
         for _i in 0..256 {
-            let mut temp_vector: Vec<u8> = nonce_iv.clone();
-            temp_vector.push(counter);
+            let mut temp_vector: Vec<u8> = nonce.clone();
+            temp_vector.append(&mut iv.clone());
+            temp_vector.append(&mut counter.to_be_bytes().to_vec());
             byte_stream_container.push(temp_vector);
+            counter += 1;
         }
 
         byte_stream_container.par_iter_mut().for_each(|x| encrypt(x, key.clone(), Some(16)));
@@ -191,7 +212,8 @@ impl AES_CTR_with_preprocessing {
 
 pub struct AES_CBC {
     keys: Vec<Vec<u8>>, 
-    primary_key: usize
+    primary_key: usize,
+    padding: GenericPadding
 }
 
 impl AESinterface for AES_CBC {
@@ -200,7 +222,8 @@ impl AESinterface for AES_CBC {
         let iv: Vec<u8> = random_byte_array(16);
         
         // pad plaintext 
-        let padded_plaintext: Vec<u8> = Vec::new(); //pad(plaintext);
+        
+        let padded_plaintext: Vec<u8> = self.padding.pad(plaintext, 16);
 
         // dividing plaintext into blocks
         let mut blocks_padded_plaintext: Vec<Vec<u8>> = Vec::new();
@@ -267,7 +290,7 @@ impl AESinterface for AES_CBC {
 
         // put encrypted blocks into one vector
         
-        blocks_ciphertext.concat()
+        self.padding.unpad(blocks_ciphertext.concat(), true)
 
 
 
@@ -275,11 +298,11 @@ impl AESinterface for AES_CBC {
 }
 
 impl AES_CBC {
-    pub fn init() -> Box<dyn AESinterface> {
+    pub fn init(padding: Paddings) -> Box<dyn AESinterface> {
         let key: Vec<u8> = random_byte_array(16);
         let mut keys: Vec<Vec<u8>> = Vec::new();
         keys.push(key);
-        Box::new(AES_CBC { keys: keys, primary_key: 0})
+        Box::new(AES_CBC { keys: keys, primary_key: 0, padding: GenericPadding::init(padding)})
     }
 
     pub fn refresh_key(&mut self) {
@@ -292,14 +315,15 @@ impl AES_CBC {
 
 pub struct AES_ECB {
     keys: Vec<Vec<u8>>, 
-    primary_key: usize
+    primary_key: usize,
+    padding: GenericPadding
 }
 
 impl AESinterface for AES_ECB {
     fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8> {
         // compute for how many block we should encrypt
         let mut padded_plaintext_blocks: Vec<Vec<u8>> = Vec::new();
-        let padded_plaintext: Vec<u8> = Vec::new(); //pad(plaintext);
+        let padded_plaintext: Vec<u8> = self.padding.pad(plaintext, 16);
 
         let blocks = padded_plaintext.len() / 16;
         for i in 0..blocks {
@@ -328,18 +352,18 @@ impl AESinterface for AES_ECB {
         }
 
         ciphertext_container.par_iter_mut().for_each(|x| decrypt(x, self.keys[self.primary_key].clone(), Some(16)));
-        ciphertext_container.concat()// unpad plaintext
+        self.padding.unpad(ciphertext_container.concat(), true)
     }
 }
 
 
 // that implementation is parallelized
 impl AES_ECB {
-    pub fn init() -> Box<dyn AESinterface> {
+    pub fn init(padding: Paddings) -> Box<dyn AESinterface> {
         let key: Vec<u8> = random_byte_array(16);
         let mut keys: Vec<Vec<u8>> = Vec::new();
         keys.push(key);
-        Box::new(AES_ECB { keys: keys, primary_key: 0})
+        Box::new(AES_ECB { keys: keys, primary_key: 0, padding: GenericPadding::init(padding)})
     }
 
     pub fn refresh_key(&mut self) {

@@ -6,22 +6,53 @@ It also includes Cryptographic primitives implemented with the same concepts of 
 The aim is to put withing a single library all the currectly used schemes and some of the recently standardized PQ algorithms. 
 
 
-### TODO:
-- Update Miller Rabin test with vector of values in order to reduce the complexity if under a certain upper bound (search for Miller Rabin Test on wikipedia).
-- Add Probabilistic Primality Test Baillie -> 2psp and lucas primality test
-- is_prime should use Pocklington-Lehmer Test (better)
-- APRCL
-- ECPP
-- Implement add, sub, mul, div for Multivariate Polynomials
-- Add AES CTR without preprocessing
-- Random bigdecimal 
-- create trait for polynomials for zero poly and identity polynomial generation
-- add Barret and Montgomery modulo reduction and NTT
+## Cryptography
+Symmetric ciphers:
+- AES 128 
+
+Modes of operation for AES:
+- CTR_with_preprocessing, ECB, CBC
+
+Padding Types:
+- ANSI_X9_23
+- ISO_10126
+- PKCS7
+- ISO_IEC_7816_4
+
+Asymmetric ciphers:
+- RSA
+- Kyber512, Kyber768, Kyber1024
+
+Homomorphic Encryption:
+- BFV (Brakerski/Fan-Vercauteren)
 
 
 
-Numeric types: BigDecimal, BigInt, BigUint
 
-Classes: 
+## Mathematics
+Numeric types:
+- ZZ (Integers)
+- QQ (Rational)
+- RR (Real)
 
-Instances:
+Groups:
+- Finite fields (Zmod)
+- Polynomial Rings
+
+Linear algebra:
+- matrices
+- vectors
+
+Polynomials:
+- Univariate polynomials
+- Monomials
+- Multivariate polynomials
+- Variables
+
+Transform:
+- NTT
+
+Arithmetic:
+- functions on primes
+- random generators
+

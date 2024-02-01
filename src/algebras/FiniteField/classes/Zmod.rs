@@ -1,6 +1,9 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
+use crate::algebras::Rings::classes::PolynomialRing::PolynomialRing;
+use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
 use crate::numbers::classes::ZZ::ZZ;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Class;
 use crate::numbers::numbers::Number;
@@ -60,6 +63,17 @@ impl Class<ZmodInstance> for Zmod {
 
         UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm, polynomial.clean_coefficients)
 
+    }
+
+    fn apply_to_poly_ring<T: Instance + Number + Operand + Clone + PartialEq+ClassInstance+'static>(&self, polynomial: PolynomialRingInstance<T>) -> PolynomialRingInstance<ZmodInstance> {
+        let mut coefficients: Vec<ZmodInstance> = Vec::new();
+        for i in 0..polynomial.degree()+1 {
+            coefficients.push(self.apply(polynomial.coefficients[i].clone()));
+        }
+        
+        let ring = PolynomialRing::new(self.apply_to_univariate_poly(polynomial.class.clone().into_inner().irreducible_polynomial.clone()), polynomial.class.clone().into_inner().fixed_length_coefficients);
+
+        return ring.new_instance(polynomial.var.clone(), coefficients, false);
     }
 
 }

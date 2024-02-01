@@ -1,7 +1,11 @@
 //use sagemath::numbers::sets::General_Class;
 use num_bigint::BigInt;
 use num_bigint::RandBigInt;
+use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
+use crate::algebras::Rings::classes::PolynomialRing::PolynomialRing;
+use crate::algebras::Rings::instances::PolynomialRing_instance::PolynomialRingInstance;
 use crate::numbers::instances::ZZ_instance;
+use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Number;
 use crate::numbers::numbers::Operand;
 use crate::numbers::numbers::StatefulClass;
@@ -30,6 +34,7 @@ impl Class<ZZinstance> for ZZ {
             ClassTypes::I32 => { let value = BigInt::from((*value.as_any().downcast_ref::<u32>().unwrap()).clone()); self.new_instance(value) },
             ClassTypes::QQ => self.new_instance(utils::round_to_bigint((BigDecimal::from((*value.as_any().downcast_ref::<QQinstance>().unwrap()).numerator.clone())) / (BigDecimal::from((*value.as_any().downcast_ref::<QQinstance>().unwrap()).denominator.clone())))),
             ClassTypes::ZZ => self.new_instance((*value.as_any().downcast_ref::<ZZinstance>().unwrap()).value.clone()),
+            ClassTypes::Zmod => self.new_instance((*value.as_any().downcast_ref::<ZmodInstance>().unwrap()).value.value.clone()),
             ClassTypes::RR => self.new_instance(utils::round_to_bigint((*value.as_any().downcast_ref::<RRinstance>().unwrap()).value.clone())),
             ClassTypes::BigDecimal => self.new_instance(utils::round_to_bigint((*value.as_any().downcast_ref::<BigDecimal>().unwrap()).clone())),
             _ => self.new_instance(BigInt::from(0))
@@ -53,6 +58,17 @@ impl Class<ZZinstance> for ZZ {
 
         UnivariatePolynomial::new_instance(coefficients, polynomial.var.clone(), polynomial.class.into_inner().multiplication_algorithm, polynomial.clean_coefficients)
 
+    }
+
+    fn apply_to_poly_ring<T: Instance + Number + Operand + Clone + PartialEq+ClassInstance+'static>(&self, polynomial: PolynomialRingInstance<T>) -> PolynomialRingInstance<ZZinstance> {
+        let mut coefficients: Vec<ZZinstance> = Vec::new();
+        for i in 0..polynomial.degree()+1 {
+            coefficients.push(self.apply(polynomial.coefficients[i].clone()));
+        }
+        
+        let ring = PolynomialRing::new(self.apply_to_univariate_poly(polynomial.class.clone().into_inner().irreducible_polynomial.clone()), polynomial.class.clone().into_inner().fixed_length_coefficients);
+
+        return ring.new_instance(polynomial.var.clone(), coefficients, false);
     }
 }
 

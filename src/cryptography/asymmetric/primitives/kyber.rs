@@ -3,7 +3,7 @@ use std::{cell::RefCell, fmt::Display};
 use bigdecimal::BigDecimal;
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, Pow};
-use crate::{algebras::{Rings::{instances::PolynomialRing_instance::PolynomialRingInstance, classes::PolynomialRing::PolynomialRing}, FiniteField::{instances::Zmod_instance::ZmodInstance, classes::Zmod::Zmod}}, arith::random::{gen_from_uniform_distribution_with_modulo, random_byte_array}, cryptography::asymmetric::interfaces::interfaces::{PKIinterface, KEMinterface, LatticeBased_PKIinterface}, matrices::{matrix::Matrix, vector::Vector}, numbers::{numbers::{Class, Instance, Number, Operand, PrimitiveNumber}, instances::{ZZ_instance::{ZZinstance, self}, RR_instance::RRinstance}, classes::RR::RR}, poly::{instances::univariate_polynomial_instance::UnivariatePolynomialInstance, classes::univariate_polynomial::UnivariatePolynomial}, transform::ntt::{NTTFactory, NTT_Algorithm}, variables::vars::Var};
+use crate::{algebras::{Rings::{instances::PolynomialRing_instance::PolynomialRingInstance, classes::PolynomialRing::PolynomialRing}, FiniteField::{instances::Zmod_instance::ZmodInstance, classes::Zmod::Zmod}}, arith::random::{gen_from_range_with_modulo, random_byte_array}, cryptography::asymmetric::interfaces::interfaces::{PKIinterface, KEMinterface, LatticeBased_PKIinterface}, matrices::{matrix::Matrix, vector::Vector}, numbers::{numbers::{Class, Instance, Number, Operand, PrimitiveNumber}, instances::{ZZ_instance::{ZZinstance, self}, RR_instance::RRinstance}, classes::RR::RR}, poly::{instances::univariate_polynomial_instance::UnivariatePolynomialInstance, classes::univariate_polynomial::UnivariatePolynomial}, transform::ntt::{NTTFactory, NTT_Algorithm}, variables::vars::Var};
 use crate::arith::random::gen_from_centered_binomial_distribution;
 use crate::numbers::classes::ZZ::ZZ;
 
@@ -133,14 +133,14 @@ impl Kyber512 {
         coefficients.push(field.one());
 
         let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None, false);
-        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
+        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone(), false);
         let ntt_ring = ring.get_ntt_enabled_ring(RefCell::new(ntt_ctxt));
 
         // creating public key, private key couple
         let mut secret_key: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             secret_key.push(
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true))))
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false))))
             ;
         }
         let s: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(secret_key);
@@ -150,7 +150,7 @@ impl Kyber512 {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
                 vect.push(
-                    ntt_ring.apply_ntt_ctxt(&((gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true)))))
+                    ntt_ring.apply_ntt_ctxt(&((gen_from_range_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true, false)))))
             }
             vectors_of_public_key.push(vect);
         } 
@@ -160,7 +160,7 @@ impl Kyber512 {
         let mut error: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             error.push((
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true)))));
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false)))));
         }
         let e: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error);
 
@@ -188,24 +188,24 @@ impl LatticeBased_PKIinterface for Kyber512 {
 
         let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext, self.n);
         let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
-        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true)))]);
+        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true, false)))]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             random_vector.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let r: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(random_vector);
 
         let mut error_1: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             error_1.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let e1: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_1);
 
         let mut error_2: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         error_2.push((
-            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true))))); 
+            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false))))); 
         let e2: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_2);
 
         let (mut A, mut b) = self.public_keys[self.primary_key].clone();
@@ -217,10 +217,10 @@ impl LatticeBased_PKIinterface for Kyber512 {
         
         
         for i in 0..u.len {
-            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i]).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true);
+            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i], false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false);
         }
 
-        v = compress(self.ring.from_ntt_ctxt(&v).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true);
+        v = compress(self.ring.from_ntt_ctxt(&v, false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false);
 
         (u,v)
     }
@@ -228,13 +228,13 @@ impl LatticeBased_PKIinterface for Kyber512 {
     fn decrypt(&self, u: Vector<PolynomialRingInstance<ZmodInstance>>, v: PolynomialRingInstance<ZmodInstance>) -> Vec<u8> {
         let mut decomp_u: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for i in 0..u.len {
-            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true)));
+            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false)));
         }
         let U: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(decomp_u);    
-        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true));
+        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false));
         let mut temp_result = decomp_v - (self.private_keys[self.primary_key].transpose()*U).values[0].clone();
 
-        let val = self.ring.from_ntt_ctxt(&temp_result);
+        let val = self.ring.from_ntt_ctxt(&temp_result, false);
         let compress_result = compress(val.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), 1);
 
         poly_to_plaintext(compress_result)
@@ -289,14 +289,14 @@ impl Kyber768 {
         coefficients.push(field.one());
 
         let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None, false);
-        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
+        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone(), false);
         let ntt_ring = ring.get_ntt_enabled_ring(RefCell::new(ntt_ctxt));
 
         // creating public key, private key couple
         let mut secret_key: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             secret_key.push(
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true))))
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false))))
             ;
         }
         let s: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(secret_key);
@@ -306,7 +306,7 @@ impl Kyber768 {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
                 vect.push(
-                    ntt_ring.apply_ntt_ctxt(&((gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true)))))
+                    ntt_ring.apply_ntt_ctxt(&((gen_from_range_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true, false)))))
             }
             vectors_of_public_key.push(vect);
         } 
@@ -316,7 +316,7 @@ impl Kyber768 {
         let mut error: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             error.push((
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true)))));
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false)))));
         }
         let e: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error);
 
@@ -344,24 +344,24 @@ impl LatticeBased_PKIinterface for Kyber768 {
 
         let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext, self.n);
         let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
-        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true)))]);
+        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true, false)))]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             random_vector.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let r: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(random_vector);
 
         let mut error_1: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             error_1.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let e1: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_1);
 
         let mut error_2: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         error_2.push((
-            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true))))); 
+            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false))))); 
         let e2: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_2);
 
         let (mut A, mut b) = self.public_keys[self.primary_key].clone();
@@ -373,10 +373,10 @@ impl LatticeBased_PKIinterface for Kyber768 {
         
         
         for i in 0..u.len {
-            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i]).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true);
+            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i], false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false);
         }
 
-        v = compress(self.ring.from_ntt_ctxt(&v).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true);
+        v = compress(self.ring.from_ntt_ctxt(&v, false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false);
 
         (u,v)
     }
@@ -384,13 +384,13 @@ impl LatticeBased_PKIinterface for Kyber768 {
     fn decrypt(&self, u: Vector<PolynomialRingInstance<ZmodInstance>>, v: PolynomialRingInstance<ZmodInstance>) -> Vec<u8> {
         let mut decomp_u: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for i in 0..u.len {
-            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true)));
+            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false)));
         }
         let U: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(decomp_u);    
-        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true));
+        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false));
         let mut temp_result = decomp_v - (self.private_keys[self.primary_key].transpose()*U).values[0].clone();
 
-        let val = self.ring.from_ntt_ctxt(&temp_result);
+        let val = self.ring.from_ntt_ctxt(&temp_result, false);
         let compress_result = compress(val.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), 1);
 
         poly_to_plaintext(compress_result)
@@ -401,7 +401,7 @@ impl LatticeBased_PKIinterface for Kyber768 {
 
 impl KEMinterface for Kyber768 {
     fn encapsulate(&self, bytes_length: usize) -> (Vector<PolynomialRingInstance<ZmodInstance>>, PolynomialRingInstance<ZmodInstance>) {
-        if bytes_length > 8 {
+        if bytes_length > 32 {
             panic!("The session key could be at maximum 8 bytes long");
         }
 
@@ -444,14 +444,14 @@ impl Kyber1024 {
         coefficients.push(field.one());
 
         let irreducible_polynomial = UnivariatePolynomial::new_instance(coefficients, var, None, false);
-        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone());
+        let ring: PolynomialRing<ZmodInstance> = PolynomialRing::new(irreducible_polynomial.clone(), false);
         let ntt_ring = ring.get_ntt_enabled_ring(RefCell::new(ntt_ctxt));
 
         // creating public key, private key couple
         let mut secret_key: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             secret_key.push(
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true))))
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false))))
             ;
         }
         let s: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(secret_key);
@@ -461,7 +461,7 @@ impl Kyber1024 {
             let mut vect: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
             for _j in 0..k {
                 vect.push(
-                    ntt_ring.apply_ntt_ctxt(&((gen_from_uniform_distribution_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true)))))
+                    ntt_ring.apply_ntt_ctxt(&((gen_from_range_with_modulo::<ZZinstance>(BigInt::zero(), q.value.clone(), n-1, q.value.clone()).quotient(irreducible_polynomial.clone(), true, false)))))
             }
             vectors_of_public_key.push(vect);
         } 
@@ -471,7 +471,7 @@ impl Kyber1024 {
         let mut error: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..k {
             error.push((
-                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true)))));
+                ntt_ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(n, eta_1) % q.clone()).quotient(irreducible_polynomial.clone(), true, false)))));
         }
         let e: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error);
 
@@ -490,7 +490,6 @@ impl Kyber1024 {
 
 
 
-
 impl LatticeBased_PKIinterface for Kyber1024 {
     fn encrypt(&self, plaintext: Vec<u8>) -> (Vector<PolynomialRingInstance<ZmodInstance>>, PolynomialRingInstance<ZmodInstance>) {
         if plaintext.len() > 32 {
@@ -499,24 +498,24 @@ impl LatticeBased_PKIinterface for Kyber1024 {
 
         let poly_plaintext: UnivariatePolynomialInstance<ZZinstance> = plaintext_to_poly(plaintext, self.n);
         let m_scaled: UnivariatePolynomialInstance<ZmodInstance> = decompress(poly_plaintext, self.field.module.as_ref().unwrap().clone(), 1);
-        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true)))]);
+        let vector_m_scaled: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(vec![self.ring.apply_ntt_ctxt(&(m_scaled.quotient(self.ring.irreducible_polynomial.clone(), true, false)))]);
         let mut random_vector: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             random_vector.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta1) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let r: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(random_vector);
 
         let mut error_1: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for _i in 0..self.k {
             error_1.push((
-                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true)))));
+                self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false)))));
         }
         let e1: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_1);
 
         let mut error_2: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         error_2.push((
-            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true))))); 
+            self.ring.apply_ntt_ctxt(&((gen_from_centered_binomial_distribution(self.n, self.eta2) % self.field.module.as_ref().unwrap().clone()).quotient(self.ring.irreducible_polynomial.clone(), true, false))))); 
         let e2: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(error_2);
 
         let (mut A, mut b) = self.public_keys[self.primary_key].clone();
@@ -528,10 +527,10 @@ impl LatticeBased_PKIinterface for Kyber1024 {
         
         
         for i in 0..u.len {
-            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i]).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true);
+            u.values[i] = compress(self.ring.from_ntt_ctxt(&u.values[i], false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false);
         }
 
-        v = compress(self.ring.from_ntt_ctxt(&v).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true);
+        v = compress(self.ring.from_ntt_ctxt(&v, false).unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false);
 
         (u,v)
     }
@@ -539,13 +538,13 @@ impl LatticeBased_PKIinterface for Kyber1024 {
     fn decrypt(&self, u: Vector<PolynomialRingInstance<ZmodInstance>>, v: PolynomialRingInstance<ZmodInstance>) -> Vec<u8> {
         let mut decomp_u: Vec<PolynomialRingInstance<ZmodInstance>> = Vec::new();
         for i in 0..u.len {
-            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true)));
+            decomp_u.push(self.ring.apply_ntt_ctxt(&decompress(u.values[i].unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.du).quotient(self.ring.irreducible_polynomial.clone(), true, false)));
         }
         let U: Vector<PolynomialRingInstance<ZmodInstance>> = Vector::new(decomp_u);    
-        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true));
+        let mut decomp_v = self.ring.apply_ntt_ctxt(&decompress(v.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), self.dv).quotient(self.ring.irreducible_polynomial.clone(), true, false));
         let mut temp_result = decomp_v - (self.private_keys[self.primary_key].transpose()*U).values[0].clone();
 
-        let val = self.ring.from_ntt_ctxt(&temp_result);
+        let val = self.ring.from_ntt_ctxt(&temp_result, false);
         let compress_result = compress(val.unwrap_from_ring(), self.field.module.as_ref().unwrap().clone(), 1);
 
         poly_to_plaintext(compress_result)
@@ -556,7 +555,7 @@ impl LatticeBased_PKIinterface for Kyber1024 {
 
 impl KEMinterface for Kyber1024 {
     fn encapsulate(&self, bytes_length: usize) -> (Vector<PolynomialRingInstance<ZmodInstance>>, PolynomialRingInstance<ZmodInstance>) {
-        if bytes_length > 8 {
+        if bytes_length > 32 {
             panic!("The session key could be at maximum 8 bytes long");
         }
 

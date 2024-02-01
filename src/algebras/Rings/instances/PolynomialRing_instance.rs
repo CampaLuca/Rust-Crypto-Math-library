@@ -1,5 +1,9 @@
 use num_bigint::BigInt;
 use num_traits::Num;
+use crate::algebras::FiniteField::instances::Zmod_instance::ZmodInstance;
+use crate::numbers::classes::ZZ::ZZ;
+use crate::numbers::instances::ZZ_instance::ZZinstance;
+use crate::numbers::numbers::Class;
 use crate::numbers::numbers::ClassInstance;
 use crate::numbers::numbers::Instance;
 use crate::numbers::numbers::Number;
@@ -33,6 +37,17 @@ impl<T> Eq for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone  
 
 impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operand + Number {
    
+    pub fn round(&self) -> PolynomialRingInstance<ZZinstance> {
+        let mut coefficients: Vec<ZZinstance> = Vec::new();
+        for i in 0..self.degree()+1 {
+            coefficients.push((self.coefficients[i].clone()).round_to_zz());
+        }
+
+        let ring = PolynomialRing::new(ZZ::new().apply_to_univariate_poly(self.class.clone().into_inner().irreducible_polynomial.clone()), self.class.clone().into_inner().fixed_length_coefficients);
+
+        return ring.new_instance(self.var.clone(), coefficients, false);
+
+    }
 
     pub fn degree(&self) -> usize {
         self.coefficients.len()-1
@@ -42,7 +57,7 @@ impl<T> PolynomialRingInstance<T> where T: Instance + Clone + PartialEq + Operan
         (*self).coefficients[(*self).coefficients.len()-1].clone()
     }
 
-    
+  
 
     pub fn unwrap_from_ring(&self) -> UnivariatePolynomialInstance<T> {
         UnivariatePolynomial::new_instance(self.coefficients.clone(), self.var.clone(), None, false)
@@ -57,15 +72,18 @@ impl<T> PolynomialRingInstance<T> where T: ClassInstance + Instance + 'static + 
 
 
 
-
-
+impl PolynomialRingInstance<ZZinstance> {
+    pub fn base_decomposition(&self, base: f64, module: BigInt) -> Vec<PolynomialRingInstance<ZZinstance>>{
+        self.class.clone().into_inner().base_decompose(self.clone(), base, module)
+    }
+}
 
 
 // ------------- OPERATIONS ---------------------
 /*
     NEGATION
 */
-impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Number + Instance + Clone + PartialEq + Operand {
+impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Number + Instance + Clone + PartialEq + Operand + ClassInstance + 'static{
     type Output = PolynomialRingInstance<T>;
     fn neg(self) -> PolynomialRingInstance<T> {
         self.class.clone().into_inner().neg(self)
@@ -75,7 +93,7 @@ impl<T> std::ops::Neg for PolynomialRingInstance<T> where T: Number + Instance +
 
 
 // ADDITION
-impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq + Clone + Operand {
+impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq + Clone + Operand + ClassInstance + 'static{
     type Output = PolynomialRingInstance<T>;
     fn add(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -88,7 +106,7 @@ impl<T> std::ops::Add<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // SUBTRACTION
-impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Sub<PolynomialRingInstance<T>> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand + ClassInstance + 'static{
     type Output = PolynomialRingInstance<T>;
     fn sub(self, rhs: PolynomialRingInstance<T>) -> PolynomialRingInstance<T> {
         if self.class == rhs.class {
@@ -112,7 +130,7 @@ impl<T> std::ops::Mul<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 // MULTIPLICATION by a scalar value
-impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand {
+impl<T> std::ops::Mul<T> for PolynomialRingInstance<T> where T: Number + Instance + PartialEq  + Clone + Operand + ClassInstance + 'static{
     type Output = PolynomialRingInstance<T>;
     fn mul(self, rhs: T) -> PolynomialRingInstance<T> {
         let coefficients = self.coefficients.into_iter().map(|x| {
@@ -135,8 +153,19 @@ impl<T> std::ops::Div<PolynomialRingInstance<T>> for PolynomialRingInstance<T> w
 }
 
 
+impl std::ops::Rem<ZZinstance> for PolynomialRingInstance<ZmodInstance> {
+    type Output = PolynomialRingInstance<ZmodInstance>;
+    fn rem(self, rhs: ZZinstance) -> Self::Output {
+        self.class.clone().into_inner().rem(self, rhs)    
+    }
+}
 
-
+impl std::ops::Rem<ZZinstance> for PolynomialRingInstance<ZZinstance> {
+    type Output = PolynomialRingInstance<ZmodInstance>;
+    fn rem(self, rhs: ZZinstance) -> Self::Output {
+        self.class.clone().into_inner().rem(self, rhs)    
+    }
+}
 
 // to be corrected TODO
 impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Display + 'static + ClassInstance + Number + Instance + PartialEq + Clone + Operand {
@@ -148,7 +177,7 @@ impl<T> num_traits::pow::Pow<BigInt> for PolynomialRingInstance<T> where T: Disp
 
 
 
-impl<T> Operand for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Number  + Operand{
+impl<T> Operand for PolynomialRingInstance<T> where T: Instance + PartialEq + Clone + Number  + Operand + ClassInstance + 'static{
     fn neg(&self) ->  PolynomialRingInstance<T> {
         -(*self).clone()
     }

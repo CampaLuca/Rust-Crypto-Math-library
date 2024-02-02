@@ -55,6 +55,7 @@ Arithmetic:
 - random generators
 
 ## Documentation by examples
+Here you can find the usage of some of the above mentioned functionalities.
 
 ### Integers
 ```rust

@@ -3,7 +3,7 @@
 ## This is an ongoing project. It MUST NOT be used in production.
 A Rust implementation of some SageMath functions.
 It also includes Cryptographic primitives implemented with the same concepts of Google Tink, making schemes interchangable and keys easy to renew, swap or backup.
-The aim is to put withing a single library all the currectly used schemes and some of the recently standardized PQ algorithms. 
+The aim is to put within a single library all the currectly used schemes and some of the recently standardized PQ algorithms. 
 
 
 ## Cryptography

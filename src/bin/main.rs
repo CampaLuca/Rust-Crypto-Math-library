@@ -210,7 +210,7 @@ fn main() {
 
     // test_kyber();
     // test_bfv();
-    // test_rsa();
+    test_rsa();
     simple_aes_test();
     aes_ctr_preprocessing_test();
     aes_cbc_test();
@@ -256,7 +256,7 @@ fn test_rsa() {
 
     let rsa: RSA = RSA::init(1024);
 
-
+    
     let plain = random_byte_array(12);
     let ciphertext = rsa.encrypt(plain.clone());
 

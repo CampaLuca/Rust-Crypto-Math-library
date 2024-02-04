@@ -16,7 +16,6 @@ impl PKIinterface for RSA {
     fn encrypt(&self, plaintext: Vec<u8>) -> Vec<u8> {
         // convert bytes to BigInt as big endian
         let value: BigInt = BigInt::from_bytes_be(Sign::Plus, &plaintext);
-        println!("Value plain: {}", value);
         let (n,e) = self.public_keys[self.primary_key].clone();
         let ciphertext = value.modpow(&e.value, &n.value);
         let (_s, c) = ciphertext.to_bytes_be();
@@ -28,7 +27,6 @@ impl PKIinterface for RSA {
         let (p,q, d) = self.private_keys[self.primary_key].clone();
         let (n,e) = self.public_keys[self.primary_key].clone();
         let plaintext = value.modpow(&d.value, &n.value);
-        println!("Value plain: {}", n.value);
         let (_s, p) = plaintext.to_bytes_be();
         p
     }
@@ -41,7 +39,6 @@ impl RSA {
         let q: ZZinstance = p.next_prime();//zz.new_instance(get_strong_prime(n_bits, false));
         let n: ZZinstance = p.clone()*q.clone();
         let phin: ZZinstance = (p.clone()-1)*(q.clone()-1);
-        println!("{}", phin);
 
         let phin_field: Zmod = Zmod::new(Some(phin));
         let e: ZmodInstance = phin_field.apply(BigInt::from(65537));

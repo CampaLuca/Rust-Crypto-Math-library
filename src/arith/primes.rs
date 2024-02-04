@@ -13,6 +13,8 @@ use num_integer::Integer;
 use crate::numbers::{numbers::{Instance, Class}, classes::ZZ::ZZ, instances::ZZ_instance::ZZinstance};
 use rand;
 
+use super::random::get_random_bigint;
+
 pub fn is_prime(n: BigUint) -> bool {
     // Translated from
     // https://rosettacode.org/wiki/Miller%E2%80%93Rabin_primality_test#Perl
@@ -248,7 +250,7 @@ pub fn get_strong_prime(nbits: u32, proof: bool) -> BigInt {
     let one: BigInt = BigInt::from(1);
     let upper_bound: BigInt = one.clone()<<nbits;
 
-    let lower_bound: BigInt = one.clone()<<(nbits-1);
+    let lower_bound: BigInt = (one.clone()<<(nbits-1)) - get_random_bigint((nbits-1) as u64);
 
     let mut result: BigInt = BigInt::from(2);
     let zz_class = ZZ::new();
@@ -283,7 +285,6 @@ pub fn get_strong_prime(nbits: u32, proof: bool) -> BigInt {
                         smallest_prime = (lbound.clone()-zz_class.apply(BigInt::from(1))).next_probable_prime();
                     }
 
-                    println!("{}", smallest_prime);
 
                     if smallest_prime > n {
                         panic!("There are no primes between those limits")

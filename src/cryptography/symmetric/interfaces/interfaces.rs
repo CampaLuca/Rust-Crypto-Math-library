@@ -1,14 +1,11 @@
 // symmetric ciphers interfaces
 
-use crate::cryptography::{symmetric::modes::modes::Modes, padding::padding::Paddings};
+use crate::cryptography::{symmetric::{modes::modes::Modes, primitives::aes::AES_KEY_SIZE}, padding::padding::Paddings};
 
 // refactoring with ! 
 pub trait AESfactory {
-    fn init(mode: Modes, padding: Paddings) -> Box<dyn AESinterface>;
+    fn init(mode: Modes, padding: Paddings, key_size: AES_KEY_SIZE) -> Box<dyn AESinterface>;
 }
-
-
-
 
 pub trait AESinterface {
     fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8>;

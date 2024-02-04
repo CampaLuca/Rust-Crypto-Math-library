@@ -26,6 +26,7 @@ use sage_math::cryptography::symmetric::interfaces::interfaces::AESfactory;
 use sage_math::cryptography::symmetric::modes::modes::Modes;
 use sage_math::cryptography::symmetric::primitives::aes::aes_factory;
 use sage_math::cryptography::symmetric::primitives::aes::AES;
+use sage_math::cryptography::symmetric::primitives::aes::AES_KEY_SIZE;
 use sage_math::numbers::classes::RR::RR;
 use sage_math::numbers::classes::ZZ::ZZ;
 use sage_math::numbers::instances::RR_instance::RRinstance;
@@ -207,9 +208,9 @@ fn main() {
     
    //test_ntt();
 
-    test_kyber();
-    test_bfv();
-    test_rsa();
+    // test_kyber();
+    // test_bfv();
+    // test_rsa();
     simple_aes_test();
     aes_ctr_preprocessing_test();
     aes_cbc_test();
@@ -285,7 +286,7 @@ fn simple_aes_test() {
         Simple AES TEST
     */
     let plaintext: Vec<u8> = random_byte_array(16);
-    let mut cipher = aes_factory::init(Modes::GCM, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::GCM, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     let ciphertext = cipher.encrypt(plaintext.clone());
 
@@ -303,7 +304,7 @@ fn aes_ctr_preprocessing_test() {
     */
 
     let plaintext: Vec<u8> = vec![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 16,17,18,20,21,21,22,33];
-    let mut cipher = aes_factory::init(Modes::CTR, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::CTR, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());
@@ -315,7 +316,7 @@ fn aes_cbc_test() {
     println!("AES CBC test");
 
     let plaintext: Vec<u8> = vec![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 16,17,18,20,21,21,22,33];
-    let mut cipher = aes_factory::init(Modes::CBC, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::CBC, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());
@@ -327,7 +328,7 @@ fn aes_ecb_test() {
     println!("AES ECB test");
 
     let plaintext: Vec<u8> = vec![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 16,17,18,20,21,21,22,33];
-    let mut cipher = aes_factory::init(Modes::ECB, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::ECB, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());

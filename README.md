@@ -8,7 +8,7 @@ The aim is to put within a single library all the currectly used schemes and som
 
 ## Cryptography
 Symmetric ciphers:
-- [AES 128 ](#aes)
+- [AES 128/192/256 ](#aes)
 
 Modes of operation for AES:
 - CTR_with_preprocessing, ECB, CBC
@@ -215,7 +215,7 @@ fn test_div() {
 #### Simple AES
 ```rust
     let plaintext: Vec<u8> = random_byte_array(16);
-    let mut cipher = aes_factory::init(Modes::NONE, Paddings::NONE);
+    let mut cipher = aes_factory::init(Modes::NONE, Paddings::NONE, AES_KEY_SIZE::AES_256);
     let ciphertext = cipher.encrypt(plaintext.clone());
     assert_eq!(plaintext, cipher.decrypt(ciphertext));
 ```
@@ -223,7 +223,7 @@ fn test_div() {
 #### AES_ECB
 ```rust
     let plaintext: Vec<u8> = random_byte_array(24);
-    let mut cipher = aes_factory::init(Modes::ECB, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::ECB, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());
@@ -232,7 +232,7 @@ fn test_div() {
 #### AES_CTR
 ```rust
     let plaintext: Vec<u8> = random_byte_array(24);
-    let mut cipher = aes_factory::init(Modes::CTR, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::CTR, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());
@@ -241,7 +241,7 @@ fn test_div() {
 #### AES_CBC
 ```rust
     let plaintext: Vec<u8> = random_byte_array(24);
-    let mut cipher = aes_factory::init(Modes::CBC, Paddings::PKCS7);
+    let mut cipher = aes_factory::init(Modes::CBC, Paddings::PKCS7, AES_KEY_SIZE::AES_256);
 
     
     let ciphertext = cipher.encrypt(plaintext.clone());
